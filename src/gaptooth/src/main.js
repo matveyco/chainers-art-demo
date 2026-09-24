@@ -1,6 +1,7 @@
 // Gaptooth Test Range — boot, modes (play / animation studio / reference match), input wiring.
 import { loadBuffer, loadJSON, containerFromBuffer, assetURL } from './assets.js';
 import { makeTextures, buildRange, buildCyclorama } from './scene.js';
+import { loadTextures } from './textures.js';
 import { Look, SKY_HORIZON } from './look.js';
 import { Character } from './character.js';
 import { Mover } from './physics.js';
@@ -31,8 +32,23 @@ async function boot() {
   window.addEventListener('resize', () => app.resizeCanvas());
   app.start();
 
+  // ---------------------------------------------------------------- assets (in parallel)
+  const bufs = {};
+  const sizes = {};
+  let done = 0;
+  const total = files.length + 1;
+  const ui0 = { loaded: (p, t) => { $('loader-fill').style.width = Math.round(p * 100) + '%'; if (t) $('loader-text').textContent = t; } };
+  ui0.loaded(0, 'Loading character, weapons and textures');
+  const tick = () => { done++; ui0.loaded(done / total, done === total ? 'Building scene' : `Loaded ${done} of ${total}`); };
+  const texP = loadTextures(app).then((t) => { tick(); return t; });
+  const filesP = Promise.all(files.map(async (f) => {        // parallel fetches: one round trip, not seven
+    bufs[f] = await loadBuffer(f);
+    sizes[f] = bufs[f].byteLength;
+    tick();
+  }));
+
   // ---------------------------------------------------------------- scene
-  const T = makeTextures(app);
+  const T = Object.assign(makeTextures(app), await texP);
   const range = buildRange(app, T);
   const cyc = buildCyclorama(app);
   const camera = new pc.Entity('Camera');
@@ -42,21 +58,9 @@ async function boot() {
   camera.lookAt(0, 1.2, 0);
   const look = new Look(app, camera);
 
-  // ---------------------------------------------------------------- assets
-  const bufs = {};
-  const sizes = {};
-  let done = 0;
-  const ui0 = { loaded: (p, t) => { $('loader-fill').style.width = Math.round(p * 100) + '%'; if (t) $('loader-text').textContent = t; } };
-  ui0.loaded(0, 'Loading character and weapons');
-  await Promise.all(files.map(async (f) => {        // parallel fetches: one round trip, not seven
-    bufs[f] = await loadBuffer(f);
-    sizes[f] = bufs[f].byteLength;
-    done++;
-    ui0.loaded(done / files.length, done === files.length ? 'Building scene' : `Loaded ${done} of ${files.length}`);
-  }));
+  await filesP;
   const meta = JSON.parse(new TextDecoder().decode(bufs['clips.json']));
   window.__ICONS__ = JSON.parse(new TextDecoder().decode(bufs['icons.json']));
-  ui0.loaded(1, 'Building scene');
   const charAsset = await containerFromBuffer(app, 'character.glb', bufs['character.glb']);
   const wAssets = {};
   for (const w of ORDER) wAssets[w] = await containerFromBuffer(app, 'weapon_' + w.toLowerCase() + '.glb', bufs['weapon_' + w.toLowerCase() + '.glb']);
@@ -72,16 +76,17 @@ async function boot() {
   delete sizes['icons.json'];
   const ui = new UI(meta, sizes);
   const sfx = new Sfx();
-  const fx = new FX(app, camera);
+  const fx = new FX(app, camera, T);
+  look.fx = fx;
   fx.onSound = (n) => sfx.play(n);
   const mover = new Mover(range.colliders);
   fx.floorAt = (p) => mover.groundAt(p, 0.4);
-  const targets = new Targets(app, T, range.props, range.colliders, fx, sfx, range.batchGroup);
+  const targets = new Targets(app, T, range.props, range.colliders, fx, sfx);
   const player = new Player(app, ch, mover, camera, fx, sfx, targets, range.colliders, meta);
 
   // score & feedback
   const juice = new Juice(app, camera);
-  const decals = new Decals(app);
+  const decals = new Decals(app, T.decals);
   const score = new Score(juice, sfx);
   player.score = score;
   player.decals = decals;
@@ -90,7 +95,7 @@ async function boot() {
   function boomJuice(pos) {
     const d = camera.getPosition().distance(pos);
     const k = Math.max(0, 1 - d / 30);
-    decals.add(new pc.Vec3(pos.x, 0.002, pos.z), pc.Vec3.UP, 1.9 + Math.random() * 0.4, 2);
+    decals.add(new pc.Vec3(pos.x, 0.002, pos.z), pc.Vec3.UP, 2.2 + Math.random() * 0.5, 3);
     if (mode !== 'play' || k <= 0) return;
     juice.flash(0.15 + 0.5 * k, 280);
     player.fovKick = Math.min(10, player.fovKick + 5 * k);

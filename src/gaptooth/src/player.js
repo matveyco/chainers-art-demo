@@ -207,7 +207,7 @@ export class Player {
     let best = null;
     if (!ignoreTargets) {
       const t = this.targets.raycast(o, d, maxDist);
-      if (t) best = { dist: t.dist, point: t.point, normal: t.normal, target: t.target, part: t.part };
+      if (t) best = { dist: t.dist, point: t.point, normal: t.normal, target: t.target, part: t.part, local: t.local, localNormal: t.localNormal };
     }
     for (const c of this.colliders) {
       if (c.active === false || c.kind === 'dummy' || c.kind === 'barrel') continue;
@@ -278,8 +278,10 @@ export class Player {
     const hitA = this.raycastWorld(aim.from, aim.dir, 120);
     const aimPoint = hitA ? hitA.point : aim.from.clone().add(aim.dir.clone().mulScalar(120));
     const mz = this.muzzle();
-    this.fx.muzzle(mz.pos, mz.dir, spec.flash);
+    this.fx.muzzle(mz.pos, mz.dir, spec.flash, w.toLowerCase());
     this.fx.muzzleSmoke(mz.pos, mz.dir, spec.smoke);
+    const bb = this.ch.weapon.nodes.Backblast;
+    if (bb) this.fx.backBlast(bb.getPosition().clone(), mz.dir);
     this.sfx.play(spec.sound);
     // feel: camera climbs, FOV punches, camera shoves back, upper body kicks, crosshair blooms
     this.recoil += spec.kick;
@@ -304,6 +306,7 @@ export class Player {
         const surface = this._surface(hit);
         this.fx.impact(hit.point, hit.normal, surface, spec.pellets > 1 ? 0.5 : 1);
         if (hit.target) {
+          if (hit.target.kind === 'dummy') this.targets.punch(hit.target, hit.local, hit.localNormal);
           const head = hit.part === 'head';
           const acc = per.get(hit.target) || { amount: 0, head: false, point: hit.point, dir: d };
           acc.amount += spec.dmg * (head ? 2 : 1);
@@ -311,8 +314,8 @@ export class Player {
           if (head) acc.point = hit.point;
           per.set(hit.target, acc);
         } else {
-          if (this.decals) this.decals.add(hit.point, hit.normal, spec.pellets > 1 ? 0.045 : 0.06, surface === 'floor' ? 3 : surface === 'wood' ? 1 : 0);
-          if (i < 2) this.sfx.play(surface === 'wood' ? 'wood' : surface === 'floor' ? 'dirt' : 'metal', Math.max(0.25, 1 - hit.dist / 40));
+          if (this.decals) this.decals.add(hit.point, hit.normal, spec.pellets > 1 ? 0.05 : 0.065, surface === 'wood' ? 1 : surface === 'metal' ? 2 : 0);
+          if (i < 2) this.sfx.play(surface === 'wood' ? 'wood' : surface === 'floor' || surface === 'wall' ? 'dirt' : 'metal', Math.max(0.25, 1 - hit.dist / 40));
         }
       }
       const from = this.pos.clone();
@@ -377,9 +380,9 @@ export class Player {
       p.e.setPosition(p.pos.clone().sub(lookOff));
       this.fx.rocketExhaust(p.pos.clone().sub(p.dir.clone().mulScalar(0.3)), p.dir);
       p.trail += dt;
-      while (p.trail > 0.018) {
-        p.trail -= 0.018;
-        this.fx.puff(p.pos.clone().sub(p.dir.clone().mulScalar(0.25)), 'smoke', 0.14 + Math.random() * 0.08, 0.7, new pc.Vec3((Math.random() - 0.5) * 0.4, 0.3, (Math.random() - 0.5) * 0.4));
+      while (p.trail > 0.028) {
+        p.trail -= 0.028;
+        this.fx.rocketTrail(p.pos.clone().sub(p.dir.clone().mulScalar(0.3)));
       }
     }
   }
@@ -605,7 +608,7 @@ export class Player {
     const want = new pc.Vec3(this.pos.x, this.pos.y + (armed ? 1.62 : 1.45), this.pos.z);
     const k = 1 - Math.exp(-dt * 16);
     this.camTarget.lerp(this.camTarget, want, k);
-    this.shoulder += ((armed ? 0.72 : 0) - this.shoulder) * (1 - Math.exp(-dt * 8));
+    this.shoulder += ((armed ? 0.95 : 0) - this.shoulder) * (1 - Math.exp(-dt * 8));   // wide enough to see the muzzle past the body
     const dist = (armed ? Math.min(this.camDist, 3.4) : this.camDist) + this.camPunch;
     const pitch = (this.camPitch - this.recoil * 0.7) * D2R, yaw = this.camYaw * D2R;
     const back = new pc.Vec3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));

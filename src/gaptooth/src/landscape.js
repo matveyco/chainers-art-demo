@@ -11,9 +11,10 @@ function rng(seed) {
 // sRGB hex -> linear rgb (vertex colours are used as linear values by the shader)
 const hex = (h) => [1, 3, 5].map((i) => Math.pow(parseInt(h.slice(i, i + 2), 16) / 255, 2.2));
 
-// boxes: { c:[x,y,z], s:[w,h,d], top, side, bottom } colours as [r,g,b] 0..1 (sRGB)
-function boxMesh(device, boxes) {
-  const pos = [], nrm = [], col = [], idx = [];
+// boxes: { c:[x,y,z], s:[w,h,d], top, side, bottom } colours as [r,g,b] 0..1 (linear)
+// tile: metres per texture repeat for world-space UVs (0 = no UVs)
+function boxMesh(device, boxes, tile = 0) {
+  const pos = [], nrm = [], col = [], idx = [], uv = [];
   const F = [
     { n: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0], k: 'side' }, { n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0], k: 'side' },
     { n: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1], k: 'top' }, { n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1], k: 'bottom' },
@@ -24,15 +25,18 @@ function boxMesh(device, boxes) {
       const c = b[f.k] || b.side;
       const base = pos.length / 3;
       for (const [su, sv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        for (let k = 0; k < 3; k++) pos.push(b.c[k] + (f.n[k] * 0.5 + f.u[k] * 0.5 * su + f.v[k] * 0.5 * sv) * b.s[k]);
+        const p = [0, 1, 2].map((k) => b.c[k] + (f.n[k] * 0.5 + f.u[k] * 0.5 * su + f.v[k] * 0.5 * sv) * b.s[k]);
+        pos.push(p[0], p[1], p[2]);
         nrm.push(...f.n);
         col.push(c[0], c[1], c[2], 1);
+        if (tile) uv.push((p[0] * f.u[0] + p[1] * f.u[1] + p[2] * f.u[2]) / tile, -(p[0] * f.v[0] + p[1] * f.v[1] + p[2] * f.v[2]) / tile);
       }
       idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
   }
   const mesh = new pc.Mesh(device);
   mesh.setPositions(pos); mesh.setNormals(nrm); mesh.setColors(col); mesh.setIndices(idx);
+  if (tile) mesh.setUvs(0, uv);
   mesh.update();
   return mesh;
 }
@@ -41,6 +45,7 @@ function vcMat(opts = {}) {
   const m = new pc.StandardMaterial();
   m.diffuse = new pc.Color(1, 1, 1);
   m.diffuseVertexColor = true;
+  if (opts.map) m.diffuseMap = opts.map;
   m.useMetalness = true; m.metalness = 0; m.gloss = opts.gloss ?? 0.15;
   if (opts.unlit) {
     m.useLighting = false;
@@ -54,34 +59,15 @@ function vcMat(opts = {}) {
   return m;
 }
 
-function canvasTex(device, name, size, draw, opts = {}) {
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  draw(c.getContext('2d'), size);
-  const t = new pc.Texture(device, {
-    name, width: size, height: size, format: pc.PIXELFORMAT_RGBA8, mipmaps: true,
-    minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR, magFilter: opts.mag ?? pc.FILTER_NEAREST,
-    addressU: pc.ADDRESS_REPEAT, addressV: pc.ADDRESS_REPEAT, anisotropy: 8,
-  });
-  t.setSource(c);
-  return t;
-}
-
-export function buildLandscape(app, parent, floorTex) {
+export function buildLandscape(app, parent, T) {
   const device = app.graphicsDevice;
   const root = new pc.Entity('Landscape');
   parent.addChild(root);
   const R = rng(20260924);
 
-  // ---- ground: pixel grass field + concrete pad (the range floor)
-  const grass = canvasTex(device, 'grass', 32, (g, n) => {
-    const r = rng(7);
-    const cols = ['#6a8f45', '#71964a', '#658a42', '#789c4f', '#5f833e'];
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { g.fillStyle = cols[Math.floor(r() * cols.length)]; g.fillRect(x, y, 1, 1); }
-    for (let k = 0; k < 40; k++) { g.fillStyle = r() > 0.5 ? '#84a857' : '#557a37'; g.fillRect(Math.floor(r() * n), Math.floor(r() * n), 1, 2); }
-  });
+  // ---- ground: pixel grass field + concrete pad (the range floor), both painted textures
   const gm = new pc.StandardMaterial();
-  gm.diffuseMap = grass; gm.diffuseMapTiling = new pc.Vec2(220, 220);
+  gm.diffuseMap = T.grass; gm.diffuseMapTiling = new pc.Vec2(220, 220);
   gm.useMetalness = true; gm.metalness = 0; gm.gloss = 0.08; gm.update();
   const field = new pc.Entity('Grass');
   field.addComponent('render', { type: 'plane', material: gm, castShadows: false, receiveShadows: true });
@@ -91,8 +77,8 @@ export function buildLandscape(app, parent, floorTex) {
 
   const PAD = { x0: -16, x1: 16, z0: -12, z1: 22 };
   const pm = new pc.StandardMaterial();
-  pm.diffuseMap = floorTex;
-  pm.diffuseMapTiling = new pc.Vec2((PAD.x1 - PAD.x0) / 5, (PAD.z1 - PAD.z0) / 5);
+  pm.diffuseMap = T.floor;
+  pm.diffuseMapTiling = new pc.Vec2((PAD.x1 - PAD.x0) / 2, (PAD.z1 - PAD.z0) / 2);   // 2 m slabs
   pm.useMetalness = true; pm.metalness = 0; pm.gloss = 0.2;
   pm.emissive = new pc.Color(0.002, 0.002, 0.002);
   pm.update();
@@ -113,10 +99,12 @@ export function buildLandscape(app, parent, floorTex) {
   kerb.addComponent('render', { meshInstances: [new pc.MeshInstance(boxMesh(device, kb), vcMat({ gloss: 0.2 }))], castShadows: false, receiveShadows: true });
   root.addChild(kerb);
 
-  // ---- voxel trees around the field (outside the pad, never in the line of fire)
-  const trees = [];
-  const trunk = hex('#6d4a2d'), trunkT = hex('#7d5635');
-  const leaf = [hex('#3f7a34'), hex('#4a8a3a'), hex('#37702f'), hex('#56963f')];
+  // ---- voxel trees around the field (outside the pad, never in the line of fire): painted
+  // foliage on the canopies, timber on the trunks; vertex colours only tint per tree
+  const trees = [], trunks = [];
+  const trunk = [0.62, 0.55, 0.5], trunkT = [0.72, 0.64, 0.58];
+  const tint = (k) => [k, k, k];
+  const leaf = [tint(0.86), tint(1.0), tint(0.8), tint(1.1)];
   let placed = 0, guard = 0;
   while (placed < 40 && guard++ < 4000) {
     const a = R() * Math.PI * 2, d = 26 + R() * 36;
@@ -125,17 +113,23 @@ export function buildLandscape(app, parent, floorTex) {
     if (z > 12 && Math.abs(x) < 26 + (z - 12) * 0.6) continue;          // keep the backdrop behind the targets clear
     const s = 0.75 + R() * 0.55;
     const th = (1.6 + R() * 1.2) * s;
-    trees.push({ c: [x, th / 2, z], s: [0.45 * s, th, 0.45 * s], top: trunkT, side: trunk, bottom: trunk });
-    const L = leaf[Math.floor(R() * leaf.length)], LT = leaf[3];
+    trunks.push({ c: [x, th / 2, z], s: [0.45 * s, th, 0.45 * s], top: trunkT, side: trunk, bottom: trunk });
+    const L = leaf[Math.floor(R() * leaf.length)], LT = tint(1.22), LB = tint(0.55);
     const cw = (2.2 + R() * 1.2) * s, ch = (1.5 + R() * 0.8) * s;
-    trees.push({ c: [x, th + ch / 2, z], s: [cw, ch, cw], top: LT, side: L, bottom: hex('#2c5a26') });
+    trees.push({ c: [x, th + ch / 2, z], s: [cw, ch, cw], top: LT, side: L, bottom: LB });
     const cw2 = cw * (0.55 + R() * 0.2), ch2 = ch * 0.75;
     trees.push({ c: [x + (R() - 0.5) * 0.4 * s, th + ch + ch2 / 2, z + (R() - 0.5) * 0.4 * s], s: [cw2, ch2, cw2], top: LT, side: L });
-    if (R() > 0.5) trees.push({ c: [x + cw * 0.45, th + ch * 0.35, z], s: [cw * 0.5, ch * 0.6, cw * 0.5], top: LT, side: L, bottom: hex('#2c5a26') });
+    if (R() > 0.5) trees.push({ c: [x + cw * 0.45, th + ch * 0.35, z], s: [cw * 0.5, ch * 0.6, cw * 0.5], top: LT, side: L, bottom: LB });
     placed++;
   }
   const treeE = new pc.Entity('Trees');
-  treeE.addComponent('render', { meshInstances: [new pc.MeshInstance(boxMesh(device, trees), vcMat({ gloss: 0.12 }))], castShadows: true, receiveShadows: true });
+  treeE.addComponent('render', {
+    meshInstances: [
+      new pc.MeshInstance(boxMesh(device, trees, 1.0), vcMat({ gloss: 0.12, map: T.foliage })),
+      new pc.MeshInstance(boxMesh(device, trunks, 0.5), vcMat({ gloss: 0.1, map: T.wood })),
+    ],
+    castShadows: true, receiveShadows: true,
+  });
   root.addChild(treeE);
 
   // ---- stepped hills on the horizon (fog turns them into layers of blue haze)

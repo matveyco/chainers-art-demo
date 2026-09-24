@@ -2,6 +2,8 @@
 // weapon layer), weapon attachment on the Grip_R socket, procedural aim offset.
 const pc = window.pc;
 
+const _q0 = new pc.Quat(), _q1 = new pc.Quat(), _q2 = new pc.Quat();
+
 export const LOCO = [
   { name: 'Idle', point: [0, 0] },
   { name: 'Walk_F', point: [0, 0.9] },
@@ -65,8 +67,29 @@ export class Character {
     this.aimPitch = 0;
     this.aimEnabled = false;
     this.kick = 0; this.kickVel = 0; this.kickYaw = 0; this.kickYawVel = 0;
+    // hip orientation of each weapon's standing stance: while running the legs swing and lean
+    // the hips, and the upper body is counter-rotated back to this so the gun stays on target
+    this.stanceHips = {};
+    for (const n of Object.keys(this.tracks)) {
+      if (!n.endsWith('_Idle')) continue;
+      const q = this._trackRot(this.tracks[n], 'Hips');
+      if (q) this.stanceHips[n.slice(0, -5)] = q;
+    }
     this.meshInstances = [];
     root.findComponents('render').forEach((r) => this.meshInstances.push(...r.meshInstances));
+  }
+
+  // first-key local rotation of a bone in a track
+  _trackRot(track, boneName) {
+    for (const c of track.curves) {
+      for (const p of c.paths) {
+        if (p.propertyPath[0] !== 'localRotation' || p.entityPath[p.entityPath.length - 1] !== boneName) continue;
+        const d = track.outputs[c.output].data;
+        const q = new pc.Quat(d[0], d[1], d[2], d[3]);
+        return q.normalize();
+      }
+    }
+    return null;
   }
 
   _path(entity) {
@@ -110,8 +133,14 @@ export class Character {
     this.anim = anim;
     this.base = anim.findAnimationLayer('Base');
     this.upper = anim.findAnimationLayer('Upper');
+    // Mask paths are matched from the root of the animated hierarchy, so they have to start with
+    // the root's name (the anim entity, or the glTF scene node the clips were authored against).
+    // Without the root prefix nothing matches and the weapon layer silently does nothing whenever
+    // the legs play a different clip: the arms swing with the walk/run and the gun hangs down.
     const spinePath = this._path(this.bones.Spine);
-    this.upper.mask = { [spinePath]: { children: true } };
+    const roots = new Set([this.model.name, 'Scene']);
+    for (const t of Object.values(this.tracks)) for (const c of t.curves) { roots.add(c.paths[0].entityPath[0]); break; }
+    this.upper.mask = Object.fromEntries([...roots].map((r) => [`${r}/${spinePath}`, { children: true }]));
     this.upper.weight = 0;
     this.spinePath = spinePath;
   }
@@ -176,6 +205,7 @@ export class Character {
   }
 
   setLocomotion(strafe, forward) {
+    this.moveSpeed = Math.hypot(strafe, forward);
     this.anim.setFloat('strafe', strafe);
     this.anim.setFloat('forward', forward);
   }
@@ -186,6 +216,24 @@ export class Character {
     this.upperWeight += (this.upperTarget - this.upperWeight) * k;
     if (Math.abs(this.upperWeight - this.upperTarget) < 0.002) this.upperWeight = this.upperTarget;
     this.upper.weight = this.upperWeight;
+  }
+
+  // Run-and-gun: the masked weapon layer drives spine and arms relative to the hips, so the run
+  // cycle's lean and sway would tip the gun down. Rebuild the spine as if the hips were in the
+  // weapon's standing stance (keeping a little of the motion so the run still reads).
+  _steadyUpperBody() {
+    const want = this.weapon && this.stanceHips[this.weapon.name];
+    const w = this.upperWeight * 0.88 * Math.min(1, (this.moveSpeed || 0) / 0.8);
+    if (!want || w < 0.01 || !this.aimEnabled) return;
+    const hips = this.bones.Hips, spine = this.bones.Spine;
+    const parent = hips.parent.getRotation();
+    const cur = hips.getLocalRotation();
+    if (Math.abs(cur.dot(want)) > 0.99995) return;                // already standing
+    const hipsWant = _q0.copy(parent).mul(want);                   // hips in stance, world
+    const target = _q1.copy(hipsWant).mul(spine.getLocalRotation()); // spine riding stance hips
+    const now = spine.getRotation();
+    _q2.slerp(now, target, w);
+    spine.setRotation(_q2);
   }
 
   // weapon recoil on the upper body: an impulse into a damped spring (degrees, + = muzzle up)
@@ -200,6 +248,7 @@ export class Character {
 
   // procedural aim offset + recoil, applied after the animation pass (the app 'update' event)
   applyAim() {
+    this._steadyUpperBody();
     const aim = this.aimEnabled ? this.aimPitch * this.upperWeight : 0;
     const kick = this.kick * this.upperWeight, yaw = this.kickYaw * this.upperWeight;
     if (Math.abs(aim) < 0.01 && Math.abs(kick) < 0.01 && Math.abs(yaw) < 0.01) return;

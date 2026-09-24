@@ -1,10 +1,10 @@
-// Test range environment: grid floor, voxel props (crates, walls, platforms), lights,
-// post-processing (CameraFrame). Returns static colliders for the controller/raycasts.
+// Test range environment: concrete pad, chamfered props (crates, block walls, tread-plate steps)
+// with painted pixel-art textures, and the studio cyclorama. Returns static colliders for the
+// controller and the raycasts.
 import { buildLandscape } from './landscape.js';
+import { chamferBoxes, texturedMaterial } from './props.js';
 
 const pc = window.pc;
-
-export const SKY = new pc.Color(0.913, 0.925, 0.945);
 
 function canvasTex(app, name, size, draw, opts = {}) {
   const c = document.createElement('canvas');
@@ -23,44 +23,9 @@ function canvasTex(app, name, size, draw, opts = {}) {
 
 function px(g, x, y, w, h, col) { g.fillStyle = col; g.fillRect(x, y, w, h); }
 
+// Procedural textures that are not part of the painted set (the studio pad).
 export function makeTextures(app) {
   const T = {};
-  // floor: 1m cells, 32px per metre, stronger line every 5m (tile = 5m)
-  T.floor = canvasTex(app, 'floor', [160, 160], (g, w, h) => {
-    // warm poured concrete: 1 m slabs with slight tone variation, saw cuts, a stronger 5 m grid
-    px(g, 0, 0, w, h, '#a8a39a');
-    const tones = ['#aba69d', '#a39e95', '#ada89f', '#a6a198', '#a9a49b'];
-    for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) px(g, i * 32 + 1, j * 32 + 1, 31, 31, tones[(i * 3 + j * 2) % tones.length]);
-    for (let k = 0; k < 90; k++) { const x = (k * 37) % w, y = (k * 61) % h; px(g, x, y, 1, 1, k % 2 ? '#9b968d' : '#b3aea5'); }
-    for (let i = 0; i < 5; i++) { px(g, i * 32, 0, 1, h, '#8f8a82'); px(g, 0, i * 32, w, 1, '#8f8a82'); }
-    px(g, 0, 0, 2, h, '#7f7a72'); px(g, 0, 0, w, 2, '#7f7a72');
-  }, { min: pc.FILTER_LINEAR_MIPMAP_LINEAR, mag: pc.FILTER_LINEAR, aniso: 8 });
-  // crate: 16px planks
-  T.crate = canvasTex(app, 'crate', [16, 16], (g) => {
-    px(g, 0, 0, 16, 16, '#c79a5c');
-    for (const y of [4, 8, 12]) px(g, 1, y, 14, 1, '#a57942');
-    px(g, 0, 0, 16, 2, '#8f6535'); px(g, 0, 14, 16, 2, '#8f6535'); px(g, 0, 0, 2, 16, '#8f6535'); px(g, 14, 0, 2, 16, '#8f6535');
-    for (let i = 2; i < 14; i++) px(g, i, i, 1, 1, '#9c6f3d');
-    px(g, 1, 1, 1, 1, '#d9b27a'); px(g, 14, 1, 1, 1, '#d9b27a');
-  });
-  T.metal = canvasTex(app, 'metal', [16, 16], (g) => {
-    px(g, 0, 0, 16, 16, '#7d848e');
-    px(g, 0, 0, 16, 1, '#959ca5'); px(g, 0, 15, 16, 1, '#646a73');
-    for (const [x, y] of [[2, 2], [13, 2], [2, 13], [13, 13]]) { px(g, x, y, 1, 1, '#555b63'); px(g, x - 1, y - 1, 1, 1, '#a7adb5'); }
-    px(g, 5, 7, 6, 2, '#6f7680');
-  });
-  T.barrel = canvasTex(app, 'barrel', [16, 16], (g) => {
-    px(g, 0, 0, 16, 16, '#c9432f');
-    px(g, 0, 2, 16, 1, '#a13322'); px(g, 0, 13, 16, 1, '#a13322');
-    for (let i = 0; i < 16; i += 4) { px(g, i, 6, 2, 4, '#f2c12e'); px(g, i + 2, 6, 2, 4, '#1f1f22'); }
-    px(g, 0, 0, 16, 1, '#e0634c');
-  });
-  T.dummy = canvasTex(app, 'dummy', [16, 16], (g) => {
-    px(g, 0, 0, 16, 16, '#d8be86');
-    for (let y = 1; y < 16; y += 3) px(g, 0, y, 16, 1, '#c4a86f');
-    px(g, 4, 4, 8, 8, '#f3ede1'); px(g, 5, 5, 6, 6, '#d6452f'); px(g, 6, 6, 4, 4, '#f3ede1'); px(g, 7, 7, 2, 2, '#d6452f');
-  });
-  T.post = canvasTex(app, 'post', [8, 8], (g) => { px(g, 0, 0, 8, 8, '#6d5236'); px(g, 0, 0, 8, 1, '#80613f'); px(g, 3, 2, 1, 5, '#5b442c'); });
   T.pad = canvasTex(app, 'pad', [32, 32], (g) => {
     px(g, 0, 0, 32, 32, '#2a2722');
     for (let i = 0; i < 32; i += 4) px(g, i, 0, 2, 32, '#302c26');
@@ -83,65 +48,50 @@ export function matFor(tex, opts = {}) {
   return m;
 }
 
-// One mesh from several axis-aligned boxes (each face UV-mapped 0..1 like the box primitive):
-// lets multi-box props render in a single draw call.
-export function mergedBoxes(app, boxes) {
-  const pos = [], nrm = [], uv = [], idx = [];
-  const faces = [
-    [[1, 0, 0], [0, 0, -1], [0, 1, 0]], [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],
-    [[0, 1, 0], [1, 0, 0], [0, 0, -1]], [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
-    [[0, 0, 1], [1, 0, 0], [0, 1, 0]], [[0, 0, -1], [-1, 0, 0], [0, 1, 0]],
-  ];
-  for (const b of boxes) {
-    for (const [n, u, v] of faces) {
-      const base = pos.length / 3;
-      for (const [su, sv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        for (let k = 0; k < 3; k++) pos.push(b.c[k] + (n[k] * 0.5 + u[k] * 0.5 * su + v[k] * 0.5 * sv) * b.s[k]);
-        nrm.push(n[0], n[1], n[2]);
-        uv.push((su + 1) / 2, (sv + 1) / 2);
-      }
-      idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    }
-  }
-  const mesh = new pc.Mesh(app.graphicsDevice);
-  mesh.setPositions(pos); mesh.setNormals(nrm); mesh.setUvs(0, uv); mesh.setIndices(idx);
-  mesh.update();
-  return mesh;
-}
-
 export function box(app, name, pos, size, material, opts = {}) {
   const e = new pc.Entity(name);
-  e.addComponent('render', { type: 'box', material, castShadows: opts.cast !== false, receiveShadows: true, batchGroupId: opts.batch ?? undefined });
+  e.addComponent('render', { type: 'box', material, castShadows: opts.cast !== false, receiveShadows: true });
   e.setLocalPosition(pos[0], pos[1], pos[2]);
   e.setLocalScale(size[0], size[1], size[2]);
   if (opts.rot) e.setLocalEulerAngles(0, opts.rot, 0);
   return e;
 }
 
+// one entity rendering a merged mesh
+export function meshEntity(name, mesh, material, opts = {}) {
+  const e = new pc.Entity(name);
+  e.addComponent('render', { meshInstances: [new pc.MeshInstance(mesh, material)], castShadows: opts.cast !== false, receiveShadows: true });
+  return e;
+}
+
+// deterministic variation
+function hash(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
 // Build the range. Coordinates: character spawns at origin facing +Z; targets downrange at +Z.
+// Static props are chamfered boxes merged per material: crates, concrete walls with painted
+// hazard caps, tread-plate steps and lane markers are five draw calls in total.
 export function buildRange(app, T) {
+  const device = app.graphicsDevice;
   const world = new pc.Entity('World');
   app.root.addChild(world);
   const props = new pc.Entity('Props');       // everything but floor + pad (hidden in the studio)
   world.addChild(props);
   const colliders = [];
-  const group = app.batcher.addGroup('static', false, 1000);
 
-  const land = buildLandscape(app, world, T.floor);
+  const land = buildLandscape(app, world, T);
   const floor = land.pad;
 
-  const crate = matFor(T.crate), metal = matFor(T.metal, { metal: 0.2, gloss: 0.35 }), pad = matFor(T.pad);
-  const addStatic = (name, pos, size, mat, surface = 'metal') => {
-    const e = box(app, name, pos, size, mat, { batch: group.id });
-    props.addChild(e);
-    colliders.push({ min: new pc.Vec3(pos[0] - size[0] / 2, pos[1] - size[1] / 2, pos[2] - size[2] / 2), max: new pc.Vec3(pos[0] + size[0] / 2, pos[1] + size[1] / 2, pos[2] + size[2] / 2), kind: 'solid', surface, entity: e });
-    return e;
+  const lists = { crate: [], wall: [], cap: [], steel: [], marker: [] };
+  const solid = (list, surface, c, s, extra = {}) => {
+    lists[list].push(Object.assign({ c, s }, extra));
+    colliders.push({ min: new pc.Vec3(c[0] - s[0] / 2, c[1] - s[1] / 2, c[2] - s[2] / 2), max: new pc.Vec3(c[0] + s[0] / 2, c[1] + s[1] / 2, c[2] + s[2] / 2), kind: 'solid', surface });
   };
+
   // studio pad (turntable sits here, flush with the floor)
-  const p = box(app, 'StudioPad', [0, -0.03, 0], [2.4, 0.08, 2.4], pad, { batch: group.id, cast: false });
+  const p = box(app, 'StudioPad', [0, -0.03, 0], [2.4, 0.08, 2.4], matFor(T.pad), { cast: false });
   world.addChild(p);
 
-  // crates: stepping stones & cover
+  // crates: stepping stones & cover (each gets its own quarter turn and a slight tone shift)
   const c = 0.8;
   const crates = [
     [-4.2, c / 2, 3.5], [-4.2, c * 1.5, 3.5], [-5.0, c / 2, 3.5], [-4.2, c / 2, 4.3],
@@ -149,20 +99,37 @@ export function buildRange(app, T) {
     [-2.2, c / 2, 7.2], [2.4, c / 2, 8.4],
     [-7.5, c / 2, -2.5], [-7.5, c * 1.5, -2.5], [-6.7, c / 2, -2.5],
   ];
-  crates.forEach((q, i) => addStatic('Crate' + i, q, [c, c, c], crate, 'wood'));
-  // platform with ramp-like steps
-  addStatic('Step1', [7.5, 0.25, -1.0], [2.0, 0.5, 2.0], metal);
-  addStatic('Step2', [7.5, 0.5, -3.0], [2.0, 1.0, 2.0], metal);
-  addStatic('Step3', [7.5, 0.75, -5.0], [2.0, 1.5, 2.0], metal);
-  // back walls of the range
-  addStatic('BermL', [-9, 1.0, 17], [8, 2.0, 1.0], metal);
-  addStatic('BermR', [9, 1.0, 17], [8, 2.0, 1.0], metal);
-  addStatic('BermC', [0, 1.5, 19], [10, 3.0, 1.0], metal);
-  addStatic('SideL', [-13.5, 0.6, 8], [1.0, 1.2, 18], metal);
-  addStatic('SideR', [13.5, 0.6, 8], [1.0, 1.2, 18], metal);
+  crates.forEach((q, i) => {
+    const k = 0.9 + hash(i) * 0.14;
+    solid('crate', 'wood', q, [c, c, c], { b: 0.035, uv: 'face', rot: Math.floor(hash(i + 20) * 4), tint: [k, k * (0.97 + hash(i + 40) * 0.05), k * 0.96] });
+  });
+  // platform with ramp-like steps (tread plate, 1 m tiles)
+  const step = (x, y, z, w, h, d) => solid('steel', 'metal', [x, y, z], [w, h, d], { b: 0.04, uv: 'world', tile: 1 });
+  step(7.5, 0.25, -1.0, 2.0, 0.5, 2.0);
+  step(7.5, 0.5, -3.0, 2.0, 1.0, 2.0);
+  step(7.5, 0.75, -5.0, 2.0, 1.5, 2.0);
+  // back walls of the range: block walls with a painted steel cap
+  const wall = (x, h, z, w, d) => {
+    solid('wall', 'wall', [x, (h - 0.1) / 2, z], [w, h - 0.1, d], { b: 0.05, uv: 'world', tile: 2 });
+    solid('cap', 'metal', [x, h - 0.05, z], [w + 0.06, 0.1, d + 0.06], { b: 0.02, uv: 'world', tile: 0.5 });
+  };
+  wall(-9, 2.0, 17, 8, 1.0);
+  wall(9, 2.0, 17, 8, 1.0);
+  wall(0, 3.0, 19, 10, 1.0);
+  wall(-13.5, 1.2, 8, 1.0, 18);
+  wall(13.5, 1.2, 8, 1.0, 18);
   // lane markers
-  for (let i = -2; i <= 2; i++) addStatic('Lane' + i, [i * 3.2, 0.06, 11.0], [0.12, 0.12, 0.9], pad);
-  return { world, props, colliders, floor, batchGroup: group.id };
+  for (let i = -2; i <= 2; i++) solid('marker', 'metal', [i * 3.2, 0.06, 11.0], [0.14, 0.12, 0.9], { b: 0.02, uv: 'world', tile: 0.5 });
+
+  const mats = {
+    crate: texturedMaterial(T.crate, { vertexColor: true, gloss: 0.22 }),
+    wall: texturedMaterial(T.wall, { gloss: 0.12 }),
+    cap: texturedMaterial(T.hazard, { gloss: 0.35, metal: 0.1 }),
+    steel: texturedMaterial(T.steel, { gloss: 0.45, metal: 0.55 }),
+    marker: texturedMaterial(T.hazard, { gloss: 0.35 }),
+  };
+  for (const [k, list] of Object.entries(lists)) props.addChild(meshEntity('Range_' + k, chamferBoxes(device, list), mats[k]));
+  return { world, props, colliders, floor };
 }
 
 // Photo-studio cyclorama for the animation studio: an infinite-looking floor that curves up into

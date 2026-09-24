@@ -217,7 +217,8 @@ export class UI {
           <div><dt>Body</dt><dd>spring recoil on spine + chest over the animation</dd></div>
           <div><dt>Aim</dt><dd>crosshair drawn from the real spread cone, turns red on targets</dd></div>
           <div><dt>Feedback</dt><dd>damage numbers, headshots ×2, combos, callouts, local best score</dd></div>
-          <div><dt>Rendering</dt><dd>FX on GPU instancing (1 draw per material), bullet holes in one dynamic mesh</dd></div>
+          <div><dt>Effects</dt><dd>toon sprite VFX in one sorted, instanced draw: flashes, tracers, sparks, fireballs that cool and erode to soot, soft smoke and dust</dd></div>
+          <div><dt>Debris</dt><dd>brass, shells, splinters, paper flakes and chunks on GPU instancing; bullet holes and scorch marks in one dynamic mesh</dd></div>
         </dl>
       </section>
       <section class="info-sec">
@@ -227,6 +228,7 @@ export class UI {
           <div><dt>Shadows</dt><dd>PCF 5×5, three texel-snapped cascades; recoil FOV kick goes through the projection so cascades never resize</dd></div>
           <div><dt>Post</dt><dd>MSAA 4×, SSAO, bloom, neutral tone mapping, grading (FX high)</dd></div>
           <div><dt>Comic</dt><dd>cel-banded sun, crisp terminators, flat ambient, rim light, ink lines from the depth buffer (<kbd>V</kbd>)</dd></div>
+          <div><dt>Range</dt><dd>painted pixel-art textures (image model, cleaned to fixed palettes), chamfered props merged per material</dd></div>
           <div><dt>Debug</dt><dd>fps, frame graph, draw calls, triangles drawn (<kbd>\`</kbd> or the counter)</dd></div>
         </dl>
       </section>

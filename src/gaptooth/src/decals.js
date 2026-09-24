@@ -1,52 +1,10 @@
 // Bullet holes and scorch marks: a single dynamic mesh (ring buffer of quads) = one draw call
-// for every mark in the level. Pixel-art atlas, alpha-tested, nudged off the surface.
+// for every mark in the level. Painted pixel-art atlas (2x2: concrete hole, wood hole, steel
+// dent, scorch), alpha-tested, nudged off the surface.
 const pc = window.pc;
 
-// 32x32 atlas, four 16x16 cells: 0 hole, 1 hole (splintered), 2 scorch, 3 dust ring
-function atlas(app) {
-  const c = document.createElement('canvas');
-  c.width = 32; c.height = 32;
-  const g = c.getContext('2d');
-  const px = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
-  const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
-  // cell 0: round hole
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    const d = Math.hypot(x - 7.5, y - 7.5);
-    if (d < 2.2) px(x, y, '#0d0b09');
-    else if (d < 3.6) px(x, y, '#2b241d');
-    else if (d < 5.2 && rnd() < 0.55) px(x, y, 'rgba(40,34,28,1)');
-  }
-  // cell 1: splintered hole
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    const d = Math.hypot(x - 7.5, y - 7.5);
-    const ang = Math.atan2(y - 7.5, x - 7.5);
-    const spike = 3.2 + 2.4 * Math.max(0, Math.cos(ang * 5 + 0.7));
-    if (d < 2.0) px(16 + x, y, '#0d0b09');
-    else if (d < spike) px(16 + x, y, rnd() < 0.8 ? '#3a2e22' : '#1c1712');
-  }
-  // cell 2: scorch
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    const d = Math.hypot(x - 7.5, y - 7.5) + (rnd() - 0.5) * 2.2;
-    if (d < 3) px(x, 16 + y, '#141210');
-    else if (d < 5.5) px(x, 16 + y, '#23201c');
-    else if (d < 7.4 && rnd() < 0.6) px(x, 16 + y, '#3b3630');
-  }
-  // cell 3: dust ring (floor hits)
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    const d = Math.hypot(x - 7.5, y - 7.5);
-    if (d < 1.6) px(16 + x, 16 + y, '#1a1816');
-    else if (d < 3.2 && rnd() < 0.7) px(16 + x, 16 + y, '#4a4640');
-  }
-  const t = new pc.Texture(app.graphicsDevice, {
-    name: 'decals', width: 32, height: 32, format: pc.PIXELFORMAT_RGBA8, mipmaps: false,
-    minFilter: pc.FILTER_NEAREST, magFilter: pc.FILTER_NEAREST, addressU: pc.ADDRESS_CLAMP_TO_EDGE, addressV: pc.ADDRESS_CLAMP_TO_EDGE,
-  });
-  t.setSource(c);
-  return t;
-}
-
 export class Decals {
-  constructor(app, capacity = 192) {
+  constructor(app, tex, capacity = 192) {
     this.cap = capacity;
     this.next = 0;
     this.pos = new Float32Array(capacity * 12);
@@ -58,7 +16,6 @@ export class Decals {
     mesh.clear(true, false);
     mesh.setPositions(this.pos); mesh.setNormals(this.nrm); mesh.setUvs(0, this.uv); mesh.setIndices(idx);
     mesh.update(pc.PRIMITIVE_TRIANGLES, false);
-    const tex = atlas(app);
     const m = new pc.StandardMaterial();
     m.diffuseMap = tex;
     m.opacityMap = tex; m.opacityMapChannel = 'a';
@@ -73,7 +30,7 @@ export class Decals {
     this.dirty = false;
   }
 
-  // cell: 0 hole, 1 splinter, 2 scorch, 3 dust
+  // cell: 0 concrete hole, 1 wood hole, 2 steel dent, 3 scorch
   add(p, n, size = 0.06, cell = 0) {
     const i = this.next;
     this.next = (this.next + 1) % this.cap;

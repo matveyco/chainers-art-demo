@@ -67,6 +67,7 @@ export class Look {
     try { this.cf = new pc.CameraFrame(app, cam); } catch (e) { console.warn('CameraFrame unavailable', e); }
     this.toon = new Toon(app, this);
     this.skyLayer = app.scene.layers.getLayerById(pc.LAYERID_SKYBOX);
+    this.fx = null;                            // set by main once the effects exist
   }
 
   // ------------------------------------------------------------------ public
@@ -149,9 +150,11 @@ export class Look {
       if (wantCf) {
         const r = cf.rendering;
         r.samples = high ? 4 : 1;
+        // comic needs an alpha channel in the HDR target (sprite coverage masks the ink lines)
+        r.renderFormats = comic ? [pc.PIXELFORMAT_RGBA16F, pc.PIXELFORMAT_RGBA32F] : [pc.PIXELFORMAT_111110F, pc.PIXELFORMAT_RGBA16F, pc.PIXELFORMAT_RGBA32F];
         r.toneMapping = pc.TONEMAP_NEUTRAL;
         r.sharpness = 0;
-        r.sceneDepthMap = comic;
+        r.sceneDepthMap = true;                // ink lines (comic) and soft particles read it
         const ss = cf.ssao;
         ss.type = high && !ref ? pc.SSAOTYPE_LIGHTING : pc.SSAOTYPE_NONE;
         ss.blurEnabled = true;
@@ -164,7 +167,7 @@ export class Look {
         ss.scale = 1;
         cf.bloom.intensity = high && !ref ? (comic ? 0.006 : 0.012) : 0;
         cf.bloom.blurLevel = 14;
-        cf.vignette.intensity = ref ? 0 : comic ? 0.12 : 0.24;
+        cf.vignette.intensity = ref ? 0 : comic ? 0.1 : 0.18;
         cf.vignette.inner = 0.55;
         cf.vignette.outer = 1.4;
         cf.vignette.curvature = 0.5;
@@ -187,5 +190,14 @@ export class Look {
     }
     cam.toneMapping = pc.TONEMAP_NEUTRAL;
     this.toon.apply(comic, wantCf);
+    // sprite effects: soft edges need the depth prepass; lit sprites (smoke, dust) take the
+    // brightness a sunlit white surface would have in this rig
+    if (this.fx) {
+      this.fx.sprites.setSoft(!!wantCf);
+      this.fx.sprites.budget = high ? 1 : 0.55;
+      this.fx.lightScale = comic ? 0.3 : 1;
+      const light = this.mode === 'studio' ? [1.05, 1.02, 0.98] : comic ? [1.3, 1.26, 1.2] : [1.36, 1.3, 1.22];
+      this.fx.sprites.setLight(light);
+    }
   }
 }

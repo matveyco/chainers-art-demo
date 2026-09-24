@@ -49,8 +49,9 @@ float inkEdge(vec2 uv) {
 	return e * (1.0 - smoothstep(uInk.w * 0.6, uInk.w, z));
 }
 `;
+// scene alpha is lowered by smoke and fire sprites (see vfx.js), so lines behind them fade out
 const INK_END = `
-	result = mix(result, uInkColor, inkEdge(uv) * uInk.y);
+	result = mix(result, uInkColor, inkEdge(uv) * uInk.y * clamp(scene.a, 0.0, 1.0));
 `;
 
 export class Toon {
