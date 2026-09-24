@@ -1,0 +1,12 @@
+{
+  "name": "chainers-art-demo-tools",
+  "private": true,
+  "type": "module",
+  "description": "Build step for the demos on chainers.art",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

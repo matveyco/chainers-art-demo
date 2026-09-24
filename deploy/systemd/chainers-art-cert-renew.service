@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew chainers.art HTTPS certificate
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/chainers-art-renew-cert

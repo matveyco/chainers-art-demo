@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Deploy from GitHub: move /opt/chainers-art to origin/main. The container serves ./site
+# straight from the checkout, so new pages are live as soon as the pull finishes.
+# Installed as /usr/local/sbin/chainers-art-update and run by chainers-art-update.timer.
+# Only pulls files. Changes to compose.yml or nginx/ are applied by hand:
+#   cd /opt/chainers-art && docker compose up -d --force-recreate
+set -euo pipefail
+cd /opt/chainers-art
+git fetch --quiet origin main
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+  git reset --hard --quiet origin/main       # mirror GitHub exactly, even after a force-push
+  logger -t chainers-art "deployed $(git rev-parse --short HEAD)"
+fi

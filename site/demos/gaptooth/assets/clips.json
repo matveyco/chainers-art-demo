@@ -1,0 +1,469 @@
+{
+ "unit": 0.04,
+ "fps": 30,
+ "character": {
+  "file": "character.glb",
+  "height_m": 1.9,
+  "verts": 604,
+  "quads": 302,
+  "atlas": [
+   256,
+   256
+  ]
+ },
+ "clips": [
+  {
+   "name": "Idle",
+   "frames": 90,
+   "duration": 3.0,
+   "loop": true
+  },
+  {
+   "name": "Walk_F",
+   "frames": 20,
+   "duration": 0.6667,
+   "loop": true,
+   "speed": 0.9000000000000001
+  },
+  {
+   "name": "Walk_B",
+   "frames": 24,
+   "duration": 0.8,
+   "loop": true,
+   "speed": 0.6129032258064516
+  },
+  {
+   "name": "Walk_L",
+   "frames": 16,
+   "duration": 0.5333,
+   "loop": true,
+   "speed": 0.6875
+  },
+  {
+   "name": "Walk_R",
+   "frames": 16,
+   "duration": 0.5333,
+   "loop": true,
+   "speed": 0.6875
+  },
+  {
+   "name": "Run_F",
+   "frames": 14,
+   "duration": 0.4667,
+   "loop": true,
+   "speed": 3.061224489795918
+  },
+  {
+   "name": "Jump_Start",
+   "frames": 8,
+   "duration": 0.2667,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.2667,
+     "name": "takeoff"
+    }
+   ]
+  },
+  {
+   "name": "Jump_Loop",
+   "frames": 18,
+   "duration": 0.6,
+   "loop": true
+  },
+  {
+   "name": "Jump_Land",
+   "frames": 12,
+   "duration": 0.4,
+   "loop": false
+  },
+  {
+   "name": "Roll",
+   "frames": 24,
+   "duration": 0.8,
+   "loop": false,
+   "travel": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.1,
+     0.25
+    ],
+    [
+     0.2,
+     0.7
+    ],
+    [
+     0.46,
+     1.9
+    ],
+    [
+     0.6,
+     2.35
+    ],
+    [
+     0.8,
+     2.5
+    ]
+   ]
+  },
+  {
+   "name": "Hit_React",
+   "frames": 14,
+   "duration": 0.4667,
+   "loop": false
+  },
+  {
+   "name": "Death",
+   "frames": 45,
+   "duration": 1.5,
+   "loop": false,
+   "events": [
+    {
+     "time": 1.0,
+     "name": "impact"
+    }
+   ]
+  },
+  {
+   "name": "Wave",
+   "frames": 60,
+   "duration": 2.0,
+   "loop": false
+  },
+  {
+   "name": "Dance",
+   "frames": 96,
+   "duration": 3.2,
+   "loop": true
+  },
+  {
+   "name": "Pistol_Idle",
+   "frames": 60,
+   "duration": 2.0,
+   "loop": true,
+   "weapon": "Pistol"
+  },
+  {
+   "name": "Pistol_Shoot",
+   "frames": 9,
+   "duration": 0.3,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.0,
+     "name": "fire"
+    },
+    {
+     "time": 0.04,
+     "name": "eject"
+    }
+   ],
+   "weapon": "Pistol"
+  },
+  {
+   "name": "Pistol_Reload",
+   "frames": 42,
+   "duration": 1.4,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.23,
+     "name": "mag_out"
+    },
+    {
+     "time": 0.46,
+     "name": "mag_grab"
+    },
+    {
+     "time": 0.92,
+     "name": "mag_in"
+    },
+    {
+     "time": 0.99,
+     "name": "slide"
+    }
+   ],
+   "weapon": "Pistol"
+  },
+  {
+   "name": "SMG_Idle",
+   "frames": 60,
+   "duration": 2.0,
+   "loop": true,
+   "weapon": "SMG"
+  },
+  {
+   "name": "SMG_Shoot",
+   "frames": 3,
+   "duration": 0.1,
+   "loop": true,
+   "fire_rate": 10,
+   "events": [
+    {
+     "time": 0.0,
+     "name": "fire"
+    },
+    {
+     "time": 0.02,
+     "name": "eject"
+    }
+   ],
+   "weapon": "SMG"
+  },
+  {
+   "name": "SMG_Reload",
+   "frames": 54,
+   "duration": 1.8,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.36,
+     "name": "mag_out"
+    },
+    {
+     "time": 0.62,
+     "name": "mag_grab"
+    },
+    {
+     "time": 1.08,
+     "name": "mag_in"
+    },
+    {
+     "time": 1.36,
+     "name": "bolt"
+    }
+   ],
+   "weapon": "SMG"
+  },
+  {
+   "name": "Shotgun_Idle",
+   "frames": 60,
+   "duration": 2.0,
+   "loop": true,
+   "weapon": "Shotgun"
+  },
+  {
+   "name": "Shotgun_Shoot",
+   "frames": 27,
+   "duration": 0.9,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.0,
+     "name": "fire"
+    },
+    {
+     "time": 0.46,
+     "name": "pump"
+    },
+    {
+     "time": 0.47,
+     "name": "eject"
+    }
+   ],
+   "weapon": "Shotgun"
+  },
+  {
+   "name": "Shotgun_Reload",
+   "frames": 72,
+   "duration": 2.4,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.5,
+     "name": "shell_grab"
+    },
+    {
+     "time": 0.85,
+     "name": "shell_in"
+    },
+    {
+     "time": 1.05,
+     "name": "shell_grab"
+    },
+    {
+     "time": 1.4,
+     "name": "shell_in"
+    },
+    {
+     "time": 1.92,
+     "name": "pump"
+    }
+   ],
+   "weapon": "Shotgun"
+  },
+  {
+   "name": "Launcher_Idle",
+   "frames": 60,
+   "duration": 2.0,
+   "loop": true,
+   "weapon": "Launcher"
+  },
+  {
+   "name": "Launcher_Shoot",
+   "frames": 27,
+   "duration": 0.9,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.0,
+     "name": "fire"
+    }
+   ],
+   "weapon": "Launcher"
+  },
+  {
+   "name": "Launcher_Reload",
+   "frames": 66,
+   "duration": 2.2,
+   "loop": false,
+   "events": [
+    {
+     "time": 0.0,
+     "name": "reload_start"
+    },
+    {
+     "time": 0.62,
+     "name": "rocket_grab"
+    },
+    {
+     "time": 1.35,
+     "name": "rocket_in"
+    }
+   ],
+   "weapon": "Launcher"
+  }
+ ],
+ "weapons": [
+  {
+   "name": "Pistol",
+   "display": "Pocket Pew",
+   "hands": 2,
+   "file": "weapon_pistol.glb",
+   "sockets": {
+    "Muzzle": [
+     0.0,
+     -0.26,
+     0.12
+    ],
+    "Eject": [
+     -0.034,
+     -0.06,
+     0.13
+    ],
+    "Mag_Grab": [
+     0.0,
+     0.02,
+     -0.12
+    ],
+    "Support": [
+     0.122,
+     -0.01,
+     0.0
+    ]
+   },
+   "atlas": [
+    128,
+    128
+   ],
+   "tris": 184
+  },
+  {
+   "name": "SMG",
+   "display": "Buzzsaw SMG",
+   "hands": 2,
+   "file": "weapon_smg.glb",
+   "sockets": {
+    "Muzzle": [
+     0.0,
+     -0.38,
+     0.1
+    ],
+    "Eject": [
+     -0.038,
+     -0.076,
+     0.124
+    ],
+    "Support": [
+     0.0,
+     -0.22,
+     0.01
+    ],
+    "Mag_Grab": [
+     0.0,
+     -0.164,
+     -0.156
+    ]
+   },
+   "atlas": [
+    128,
+    128
+   ],
+   "tris": 232
+  },
+  {
+   "name": "Shotgun",
+   "display": "Boomer Pump",
+   "hands": 2,
+   "file": "weapon_shotgun.glb",
+   "sockets": {
+    "Muzzle": [
+     0.0,
+     -0.57,
+     0.12
+    ],
+    "Eject": [
+     -0.038,
+     -0.09,
+     0.11
+    ],
+    "Support": [
+     0.0,
+     -0.24,
+     0.075
+    ],
+    "Load": [
+     0.0,
+     -0.11,
+     0.05
+    ]
+   },
+   "atlas": [
+    128,
+    128
+   ],
+   "tris": 212
+  },
+  {
+   "name": "Launcher",
+   "display": "Thumper RL",
+   "hands": 2,
+   "file": "weapon_launcher.glb",
+   "sockets": {
+    "Muzzle": [
+     0.0,
+     -0.54,
+     0.15
+    ],
+    "Backblast": [
+     0.0,
+     0.42,
+     0.15
+    ],
+    "Support": [
+     0.0,
+     -0.16,
+     0.01
+    ]
+   },
+   "atlas": [
+    128,
+    256
+   ],
+   "tris": 172
+  }
+ ]
+}

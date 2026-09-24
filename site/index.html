@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chainers Demos</title>
+<meta name="description" content="Playable experiments from the Chainers team: characters, animation and game feel, running in your browser.">
+<meta name="theme-color" content="#f3f5f9">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://chainers.art/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Chainers Demos">
+<meta property="og:title" content="Chainers Demos">
+<meta property="og:description" content="Playable experiments from the Chainers team, running in your browser.">
+<meta property="og:url" content="https://chainers.art/">
+<meta property="og:image" content="https://chainers.art/demos/gaptooth/social.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/assets/fonts/pixelify-sans-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Pixelify Sans"; font-weight: 700; font-display: swap; src: url(/assets/fonts/pixelify-sans-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 400; font-display: swap; src: url(/assets/fonts/figtree-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 600; font-display: swap; src: url(/assets/fonts/figtree-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 700; font-display: swap; src: url(/assets/fonts/figtree-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url(/assets/fonts/jetbrains-mono-latin-400-normal.woff2) format("woff2"); }
+
+:root {
+  --ground: #f3f5f9;       /* cool paper, same family as the Chainers site */
+  --card: #ffffff;
+  --ink: #16161b;
+  --muted: #5d6373;
+  --faint: #8a90a0;
+  --line: #dce1ea;
+  --chip: #eef1f6;
+  --accent: #e6c13f;       /* Gaptooth yellow */
+  --accent-ink: #1a1814;
+  --live: #1f9e90;
+  --f-display: "Pixelify Sans", "Courier New", ui-monospace, monospace;
+  --f-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --gut: 16px;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 16px/1.55 var(--f-ui); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: max(var(--gut), env(safe-area-inset-left, 0px)); }
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: calc(18px + env(safe-area-inset-top, 0px)) 18px; }
+.mark { font: 700 21px/1 var(--f-ui); letter-spacing: .14em; text-decoration: none; display: inline-flex; align-items: baseline; gap: 1px; }
+.mark span { color: var(--faint); font-weight: 600; letter-spacing: .02em; text-transform: none; }
+.top nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.top nav a { font-weight: 600; font-size: 14px; text-decoration: none; padding: 7px 12px; border-radius: 999px; color: var(--muted); }
+.top nav a:hover { color: var(--ink); background: var(--chip); }
+
+/* intro */
+.intro { padding-block: 40px 36px; border-bottom: 1px solid var(--line); }
+.intro h1 { margin: 0 0 14px; font: 700 clamp(30px, 4.6vw, 48px)/1.08 var(--f-ui); letter-spacing: -.02em; max-width: 19ch; text-wrap: balance; }
+.intro p { margin: 0; font-size: 18px; color: var(--muted); max-width: 58ch; }
+
+/* demos */
+.demos { padding-block: 34px 56px; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+.sec-head h2 { margin: 0; font: 700 24px/1 var(--f-display); letter-spacing: .04em; }
+.count { font: 12px var(--f-mono); color: var(--muted); }
+.count::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--live); margin-right: 6px; vertical-align: 1px; }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 22px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.tile-link { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: inherit; }
+.tile:hover { transform: translateY(-3px); border-color: #c9d0dc; box-shadow: 0 14px 34px rgba(22, 22, 27, .10); }
+.shot { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #e7eaf0; }
+.shot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+.tile:hover .shot img { transform: scale(1.035); }
+.play { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; padding: 8px 14px 8px 12px; border-radius: 999px; box-shadow: 0 4px 14px rgba(26, 24, 20, .25); }
+.play::before { content: ""; width: 0; height: 0; border-left: 9px solid var(--accent-ink); border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+.body { padding: 16px 18px 18px; display: grid; gap: 10px; flex: 1; align-content: start; }
+.body h3 { margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: -.01em; }
+.body p { margin: 0; color: var(--muted); font-size: 15px; }
+.tags { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tags li { font: 11.5px/1 var(--f-mono); background: var(--chip); color: var(--ink); padding: 6px 8px; border-radius: 6px; }
+.body .meta { margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 4px 16px; font: 12px/1.5 var(--f-mono); color: var(--faint); }
+
+.soon { border-style: dashed; background: transparent; }
+.soon:hover { transform: none; box-shadow: none; border-color: var(--line); }
+.soon .shot { background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(22, 22, 27, .035) 22px 24px), repeating-linear-gradient(0deg, transparent 0 22px, rgba(22, 22, 27, .035) 22px 24px), #eef1f6; display: grid; place-items: center; }
+.soon .shot span { font: 700 44px/1 var(--f-display); color: #c3c9d4; letter-spacing: .1em; }
+
+footer { border-top: 1px solid var(--line); padding-block: 22px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+footer a { color: var(--muted); }
+footer a:hover { color: var(--ink); }
+
+@media (max-width: 560px) {
+  .intro { padding-block: 22px 26px; }
+  .intro p { font-size: 16px; }
+  .top nav a { padding: 6px 9px; font-size: 13px; }
+  .top nav a[href="#demos"] { display: none; }
+  .soon .shot { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="mark" href="/" aria-label="Chainers Demos home">CHAINERS<span>.art</span></a>
+    <nav aria-label="Site">
+      <a href="#demos">Demos</a>
+      <a href="https://chainers.io" rel="noopener">Play Chainers <span aria-hidden="true">&#8599;</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1>Playable experiments from the Chainers team</h1>
+      <p>Characters, animation and game feel, built for the browser. Every demo runs in real time on WebGL, on desktop and phone, with nothing to install.</p>
+    </section>
+
+    <section class="demos" id="demos" aria-labelledby="demos-h">
+      <div class="sec-head">
+        <h2 id="demos-h">Demos</h2>
+        <span class="count">1 playable</span>
+      </div>
+      <ul class="grid">
+        <li class="tile">
+          <a class="tile-link" href="/demos/gaptooth/">
+            <div class="shot">
+              <img src="/demos/gaptooth/cover.jpg" width="1200" height="750" alt="Gaptooth, a yellow voxel character, firing a compact SMG while casings fly">
+              <span class="play">Play</span>
+            </div>
+            <div class="body">
+              <h3>Gaptooth Test Range</h3>
+              <p>A voxel character rebuilt from a single screenshot, rigged with 26 animations and four weapons with moving parts. Run the range, chain combos, or take the 60-second score attack.</p>
+              <ul class="tags" aria-label="Built with">
+                <li>PlayCanvas</li><li>WebGL 2</li><li>26 animations</li><li>4 weapons</li>
+              </ul>
+              <p class="meta"><span>Desktop and mobile</span><span>Under 1 MB download</span></p>
+            </div>
+          </a>
+        </li>
+        <li class="tile soon">
+          <div class="shot" aria-hidden="true"><span>NEXT</span></div>
+          <div class="body">
+            <h3>Next demo</h3>
+            <p>In production. New experiments land here as soon as they are playable.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <span>&copy; 2026 Chainers</span>
+    <a href="https://github.com/matveyco/chainers-art-demo" rel="noopener">Source on GitHub</a>
+  </footer>
+</div>
+</body>
+</html>

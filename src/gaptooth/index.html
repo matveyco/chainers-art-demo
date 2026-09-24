@@ -1,0 +1,200 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gaptooth Test Range</title>
+<link rel="stylesheet" href="src/fonts.css" data-inline>
+<link rel="stylesheet" href="src/style.css" data-inline>
+<!--__BODY__-->
+<div id="app">
+  <canvas id="gl" tabindex="0" aria-label="3D viewport"></canvas>
+  <div class="ref-frame" id="ref-frame" data-cmp="wipe" hidden>
+    <img id="ref-over" alt="Reference screenshot" draggable="false">
+    <div class="ref-split" id="ref-split"><i></i></div>
+    <span class="ref-tag rt">Real-time</span>
+    <span class="ref-tag ss">Screenshot</span>
+  </div>
+
+  <div id="loader" role="status" aria-live="polite">
+    <div class="loader-card">
+      <div class="brand-mark">GAPTOOTH</div>
+      <div class="loader-bar"><i id="loader-fill"></i></div>
+      <div class="loader-text" id="loader-text">Loading engine…</div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">GAPTOOTH</span>
+      <span class="brand-sub">voxel character kit · test range</span>
+    </div>
+    <nav class="modes" role="tablist" aria-label="Mode">
+      <button role="tab" id="tab-play" data-mode="play" aria-selected="true">Play</button>
+      <button role="tab" id="tab-studio" data-mode="studio" aria-selected="false">Animation studio</button>
+      <button role="tab" id="tab-ref" data-mode="ref" aria-selected="false">Reference match</button>
+    </nav>
+    <div class="stats" id="stats" aria-label="Renderer stats">
+      <span><b id="st-fps">–</b> fps</span>
+      <span><b id="st-dc">–</b> draws</span>
+      <span><b id="st-tri">–</b> MB VRAM</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-sound" aria-pressed="true" title="Sound on/off">Sound on</button>
+      <button class="icon-btn" id="btn-quality" title="Toggle post-processing (SSAO, bloom, MSAA)">FX high</button>
+      <button class="icon-btn" id="btn-info" aria-expanded="false" aria-controls="panel-info">Specs</button>
+    </div>
+  </header>
+
+  <!-- PLAY -->
+  <aside class="panel left" id="panel-play" data-mode="play">
+    <div class="panel-head">
+      <h2>Controls</h2>
+      <button class="collapse" data-collapse="panel-play" aria-expanded="true" title="Collapse">–</button>
+    </div>
+    <div class="panel-body">
+      <dl class="keys">
+        <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>move</dd></div>
+        <div><dt><kbd>Shift</kbd></dt><dd>run</dd></div>
+        <div><dt><kbd>Space</kbd></dt><dd>jump</dd></div>
+        <div><dt><kbd>C</kbd></dt><dd>dodge roll</dd></div>
+        <div><dt><kbd>1</kbd><span class="to">–</span><kbd>4</kbd></dt><dd>weapons</dd></div>
+        <div><dt><kbd>Q</kbd></dt><dd>holster</dd></div>
+        <div><dt><kbd>LMB</kbd></dt><dd>fire (hold)</dd></div>
+        <div><dt><kbd>R</kbd></dt><dd>reload</dd></div>
+        <div><dt><kbd>F</kbd><kbd>G</kbd></dt><dd>wave, dance</dd></div>
+        <div><dt><kbd>K</kbd></dt><dd>knockout</dd></div>
+      </dl>
+      <p class="hint" id="lock-hint">Click the scene to aim with the mouse. <kbd>Esc</kbd> releases it.</p>
+      <button class="cta wide" id="btn-challenge">Start 60-second score attack <kbd>Enter</kbd></button>
+      <p class="hint small">Headshots do double damage. Hits chain into combos, burning barrels set each other off, golden pop-ups pay triple.</p>
+    </div>
+  </aside>
+  <div class="scorebar" id="scorebar" data-mode="play" aria-label="Score">
+    <div class="main"><b id="sc-score">0</b><span>score</span></div>
+    <div><b id="sc-kos">0</b><span>KOs</span></div>
+    <div><b id="sc-acc">–</b><span>accuracy</span></div>
+  </div>
+
+  <!-- STUDIO -->
+  <aside class="panel left wide" id="panel-studio" data-mode="studio" hidden>
+    <div class="panel-head">
+      <h2>Clip library <small id="clip-count"></small></h2>
+      <button class="collapse" data-collapse="panel-studio" aria-expanded="true" title="Collapse">–</button>
+    </div>
+    <div class="panel-body">
+      <div class="clip-groups" id="clip-groups"></div>
+    </div>
+    <div class="transport">
+      <div class="now">
+        <span class="now-name" id="now-name">Idle</span>
+        <span class="now-meta" id="now-meta"></span>
+      </div>
+      <div class="scrub-row">
+        <button class="btn-play" id="btn-play" aria-label="Pause">❚❚</button>
+        <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Clip time">
+        <span class="time" id="time">0.00 s</span>
+      </div>
+      <div class="opt-row">
+        <label for="speed">Speed</label>
+        <select id="speed">
+          <option value="0.1">0.1×</option>
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="opt-turn" checked> Turntable</label>
+        <label class="chk"><input type="checkbox" id="opt-bones"> Bones</label>
+        <label class="chk"><input type="checkbox" id="opt-sockets"> Sockets</label>
+        <label class="chk"><input type="checkbox" id="opt-wire"> Wire</label>
+      </div>
+      <div class="opt-row views">
+        <span class="lbl">View</span>
+        <button data-view="front">Front</button><button data-view="three">¾</button><button data-view="side">Side</button><button data-view="back">Back</button><button data-view="top">Top</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- REFERENCE -->
+  <aside class="panel left" id="panel-ref" data-mode="ref" hidden>
+    <div class="panel-head">
+      <h2>Reference match</h2>
+      <button class="collapse" data-collapse="panel-ref" aria-expanded="true" title="Collapse">–</button>
+    </div>
+    <div class="panel-body">
+      <p class="hint">The real-time model, framed with the screenshot's camera (8° yaw, 20° vertical FOV) and its flat lighting. Drag across the frame to wipe between the two.</p>
+      <div class="seg" role="radiogroup" aria-label="Compare">
+        <button role="radio" data-cmp="wipe" aria-checked="true">Wipe</button>
+        <button role="radio" data-cmp="blend" aria-checked="false">Onion skin</button>
+        <button role="radio" data-cmp="off" aria-checked="false">Model only</button>
+      </div>
+      <div class="opt-row">
+        <label class="chk"><input type="checkbox" id="opt-reflight" checked> Reference lighting</label>
+        <label class="chk"><input type="checkbox" id="opt-refanim"> Animate idle</label>
+      </div>
+      <dl class="specs mini">
+        <div><dt>Silhouette match</dt><dd>91.2% IoU at 406 × 668</dd></div>
+        <div><dt>Grid</dt><dd>1 voxel = 4 cm, 4 texels per voxel</dd></div>
+        <div><dt>Body</dt><dd>9 × 6 voxels, 47.5 tall (1.90 m)</dd></div>
+        <div><dt>Palette</dt><dd id="ref-palette"></dd></div>
+      </dl>
+    </div>
+  </aside>
+
+  <!-- INFO -->
+  <aside class="panel right" id="panel-info" hidden>
+    <div class="panel-head">
+      <h2>Specs &amp; integration</h2>
+      <button class="collapse" id="info-close" title="Close">×</button>
+    </div>
+    <div class="panel-body" id="info-body"></div>
+  </aside>
+
+  <!-- HUD -->
+  <div class="hud" aria-hidden="true">
+    <div class="screenflash" id="screenflash"></div>
+    <div class="dmg-layer" id="dmg-layer"></div>
+    <div class="crosshair" id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+    <div class="hitmark" id="hitmark"><i></i><i></i><i></i><i></i></div>
+    <div class="combo" id="combo" hidden><b id="combo-n">x2</b><span>combo</span><i id="combo-bar"></i></div>
+    <div class="callouts" id="callouts"></div>
+    <div class="round-timer" id="round-timer" hidden>60.0</div>
+    <div class="countdown" id="countdown" hidden></div>
+  </div>
+  <section class="results" id="results" hidden role="dialog" aria-labelledby="res-title">
+    <h2 id="res-title">Score attack</h2>
+    <div class="res-score"><b id="res-score">0</b><span id="res-best"></span></div>
+    <p class="res-rank" id="res-rank"></p>
+    <dl class="res-stats">
+      <div><dt>Knockdowns</dt><dd id="res-kos">0</dd></div>
+      <div><dt>Headshots</dt><dd id="res-heads">0</dd></div>
+      <div><dt>Accuracy</dt><dd id="res-acc">–</dd></div>
+      <div><dt>Best combo</dt><dd id="res-combo">×0</dd></div>
+      <div><dt>Barrels</dt><dd id="res-boom">0</dd></div>
+      <div><dt>Golden</dt><dd id="res-gold">0</dd></div>
+    </dl>
+    <div class="res-actions">
+      <button class="cta" id="res-again">Play again</button>
+      <button class="ghost" id="res-free">Free play</button>
+    </div>
+  </section>
+  <div class="weaponbar" id="weaponbar" data-mode="play">
+    <div class="slots" id="slots"></div>
+    <div class="ammo" id="ammo"><b id="ammo-cur">–</b><span id="ammo-max"></span><em id="ammo-state"></em></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- TOUCH -->
+  <div class="touch" id="touch" hidden>
+    <div class="stick" id="stick"><i></i></div>
+    <div class="tbtns">
+      <button id="t-fire">Fire</button>
+      <button id="t-jump">Jump</button>
+      <button id="t-roll">Roll</button>
+      <button id="t-reload">Reload</button>
+      <button id="t-weapon">Weapon</button>
+      <button id="t-challenge" class="t-wide">Score attack</button>
+    </div>
+  </div>
+</div>
+<!--__SCRIPTS__-->
+<script src="engine/playcanvas.js"></script>
+<script type="module" src="src/main.js"></script>

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Issue or renew the chainers.art Let's Encrypt certificate (certbot in Docker, webroot challenge),
+# point nginx at it, and reload nginx only if the whole config still tests clean.
+# If Let's Encrypt is unreachable and no certificate exists yet, a self-signed one keeps HTTPS up
+# behind Cloudflare ("Full" mode) until the next run succeeds.
+# Installed as /usr/local/sbin/chainers-art-renew-cert and run by chainers-art-cert-renew.timer.
+set -euo pipefail
+SSL=/etc/nginx/ssl/chainers-art
+LIVE=/etc/letsencrypt/live/chainers.art
+install -d -m 755 "$SSL" /var/www/chainers-art-acme
+
+docker run --rm -v /etc/letsencrypt:/etc/letsencrypt -v /var/www/chainers-art-acme:/var/www/acme \
+  certbot/certbot:latest certonly --webroot -w /var/www/acme -d chainers.art -d www.chainers.art \
+  --cert-name chainers.art --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email --quiet \
+  || echo "chainers-art: certbot failed, keeping the current certificate" >&2
+
+if [ -f "$LIVE/fullchain.pem" ]; then
+  ln -sfn "$LIVE/fullchain.pem" "$SSL/fullchain.pem"
+  ln -sfn "$LIVE/privkey.pem" "$SSL/privkey.pem"
+elif [ ! -e "$SSL/fullchain.pem" ]; then
+  openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -days 90 \
+    -subj "/CN=chainers.art" -addext "subjectAltName=DNS:chainers.art,DNS:www.chainers.art" \
+    -keyout "$SSL/selfsigned.key" -out "$SSL/selfsigned.crt" 2>/dev/null
+  chmod 600 "$SSL/selfsigned.key"
+  ln -sfn "$SSL/selfsigned.crt" "$SSL/fullchain.pem"
+  ln -sfn "$SSL/selfsigned.key" "$SSL/privkey.pem"
+  echo "chainers-art: using a self-signed certificate for now" >&2
+fi
+
+if [ -e /etc/nginx/sites-enabled/zz-chainers-art ]; then
+  nginx -t -q && systemctl reload nginx
+fi
