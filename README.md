@@ -4,7 +4,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 
 | Demo | URL | What it shows |
 |---|---|---|
-| Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | A voxel character with 26 animations and four weapons with moving parts. Third-person shooting range, 60-second score attack, animation studio, reference match. Built with PlayCanvas. |
+| Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
 
 ## Layout
 
@@ -29,13 +29,21 @@ docker compose up -d          # http://localhost:4190
 
 Any static server also works (`npx serve site`), without the production headers.
 
+## Gaptooth: what is in the build
+
+- **Character**: 3.6k triangles, one draw call. Every convex edge is chamfered (1.2 cm) with authored normals, so edges catch the light like a moulded figure. Limbs are rigid segments that pivot over rounded joint cores at the elbows, wrists and knees; the body column bends over smooth weight zones with an edge loop every 2 cm. Metal/roughness map for vinyl skin, cotton, leather and rubber.
+- **Lighting**: image-based lighting from a procedural sky and a studio light tent, built on the GPU at start-up (no HDR downloads). PCF 5×5 sun shadows in three texel-snapped cascades; the recoil FOV kick is applied through the projection matrix, so the cascades never resize and the shadows stay still.
+- **Styles**: `PBR` (MSAA, SSAO, bloom, neutral tone mapping, grading) and `Comic` (cel-banded light, crisp terminators, flat ambient, rim light, ink lines found in the compose pass from the depth prepass). Toggle in the top bar or with `V`.
+- **Performance overlay**: the counter in the top bar (or `` ` ``) opens fps, a frame-time graph, draw calls, triangles drawn this frame, shadow and post settings.
+- **Assets**: GLBs with 8-bit normals and weights and 16-bit UVs (`KHR_mesh_quantization`), int16 animation rotations.
+
 ## Edit the Gaptooth demo
 
 ```bash
 cd tools && npm install && npm run build
 ```
 
-`build.mjs` writes `app.<hash>.js`, `style.<hash>.css` and `index.html` into `site/demos/gaptooth/`. Assets in `site/demos/gaptooth/assets/` are requested with a content-hash query, so browsers and Cloudflare never serve stale files after an update.
+`build.mjs` writes `app.<hash>.js`, `style.<hash>.css` and `index.html` into `site/demos/gaptooth/`, and stamps the hub's tile and share images with their content hash. Assets in `site/demos/gaptooth/assets/` are requested with a content-hash query, so browsers and Cloudflare never serve stale files after an update.
 
 ## Add a demo
 

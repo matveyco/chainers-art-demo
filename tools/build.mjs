@@ -61,7 +61,7 @@ body = body.replace(/<div class="brand">\s*<span class="brand-mark">GAPTOOTH<\/s
 if (!body.includes('class="back"')) throw new Error('brand block not found');
 
 const title = 'Gaptooth Test Range · Chainers Demos';
-const desc = 'A voxel character with 26 animations and four weapons, playable in the browser: shooting range, 60-second score attack, animation studio.';
+const desc = 'An articulated voxel character with 26 animations and four weapons, playable in the browser in PBR or comic style: shooting range, 60-second score attack, animation studio.';
 const html = `<!doctype html>
 <html lang="en" data-assets-version="${assetsVersion}">
 <head>
@@ -91,5 +91,13 @@ ${body.trim()}
 </html>
 `;
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
+
+// ---- hub: point the tile and the share card at the current images (Cloudflare caches images for a day)
+const HUB = path.join(ROOT, 'site', 'index.html');
+const tileV = hash(fs.readFileSync(path.join(OUT, 'cover.jpg')));
+const hub = fs.readFileSync(HUB, 'utf8')
+  .replace(/\/demos\/gaptooth\/cover\.jpg(\?v=[0-9a-f]+)?/g, `/demos/gaptooth/cover.jpg?v=${tileV}`)
+  .replace(/\/demos\/gaptooth\/social\.jpg(\?v=[0-9a-f]+)?/g, `/demos/gaptooth/social.jpg?v=${coverV}`);
+fs.writeFileSync(HUB, hub);
 const kb = (n) => (n / 1024).toFixed(1) + ' KB';
 console.log(`built ${path.relative(ROOT, OUT)}: ${jsName} ${kb(js.length)}, ${cssName} ${kb(css.length)}, assets v=${assetsVersion}`);

@@ -1,6 +1,7 @@
 // Gaptooth Test Range — boot, modes (play / animation studio / reference match), input wiring.
 import { loadBuffer, loadJSON, containerFromBuffer, assetURL } from './assets.js';
-import { makeTextures, buildRange, buildLights, setupCameraFrame, aimLights, SKY } from './scene.js';
+import { makeTextures, buildRange, buildCyclorama } from './scene.js';
+import { Look, SKY_HORIZON } from './look.js';
 import { Character } from './character.js';
 import { Mover } from './physics.js';
 import { FX } from './fx.js';
@@ -12,6 +13,7 @@ import { Juice } from './juice.js';
 import { Score } from './score.js';
 import { Challenge } from './challenge.js';
 import { Decals } from './decals.js';
+import { DebugHud } from './debug.js';
 
 const pc = window.pc;
 const D2R = Math.PI / 180;
@@ -32,19 +34,13 @@ async function boot() {
   // ---------------------------------------------------------------- scene
   const T = makeTextures(app);
   const range = buildRange(app, T);
-  const lights = buildLights(app);
+  const cyc = buildCyclorama(app);
   const camera = new pc.Entity('Camera');
-  camera.addComponent('camera', { clearColor: SKY, fov: 55, nearClip: 0.05, farClip: 200 });
+  camera.addComponent('camera', { clearColor: SKY_HORIZON, fov: 55, nearClip: 0.05, farClip: 220 });
   app.root.addChild(camera);
   camera.setPosition(0, 2.2, -4.5);
   camera.lookAt(0, 1.2, 0);
-  let cframe = setupCameraFrame(app, camera);
-  // reference-lighting rig (flat light from above, like the source screenshot)
-  const refLight = new pc.Entity('RefLight');
-  refLight.addComponent('light', { type: 'directional', color: new pc.Color(1, 1, 1), intensity: 0.933, castShadows: false });
-  refLight.setEulerAngles(7.7, 0, 0);
-  refLight.enabled = false;
-  app.root.addChild(refLight);
+  const look = new Look(app, camera);
 
   // ---------------------------------------------------------------- assets
   const bufs = {};
@@ -67,6 +63,12 @@ async function boot() {
 
   const ch = new Character(app, charAsset, meta, wAssets);
   app.root.addChild(ch.root);
+  const dbg = new DebugHud(app, camera, {
+    charTris: meta.character.tris, clips: meta.clips.length,
+    weaponTris: meta.weapons.reduce((a, w) => a + (w.tris || 0), 0),
+    bones: Object.keys(ch.bones).filter((n) => !/^(Root|Grip_)/.test(n)).length,
+  });
+  dbg.look = look;
   delete sizes['icons.json'];
   const ui = new UI(meta, sizes);
   const sfx = new Sfx();
@@ -140,8 +142,18 @@ async function boot() {
   // ---------------------------------------------------------------- framing
   // Off-centre projection (lens shift) so the subject sits in the part of the screen that
   // panels don't cover. PlayCanvas calls calculateProjection wherever the projection is used.
-  const view = { cx: 0, cy: 0, area: null, dirty: true, baseFov: 55 };
-  camera.camera.calculateProjection = (mat) => { mat.data[8] = -view.cx; mat.data[9] = -view.cy; };
+  // The recoil FOV kick is applied here too, not through camera.fov: changing the fov would
+  // resize the shadow cascades every shot and make the shadows crawl.
+  const view = { cx: 0, cy: 0, area: null, dirty: true, baseFov: 55, kick: 0 };
+  camera.camera.calculateProjection = (mat) => {
+    if (view.kick) {
+      const cam = camera.camera;
+      const f = 1 / Math.tan((cam.fov + view.kick) * D2R / 2);
+      const aspect = cam.aspectRatio || 1;
+      if (cam.horizontalFov) { mat.data[0] = f; mat.data[5] = f * aspect; } else { mat.data[0] = f / aspect; mat.data[5] = f; }
+    }
+    mat.data[8] = -view.cx; mat.data[9] = -view.cy;
+  };
   const markLayout = () => { view.dirty = true; };
   window.addEventListener('resize', markLayout);
   if (window.ResizeObserver) {
@@ -212,9 +224,7 @@ async function boot() {
   const refView = { yaw: 8, h: 0.96, dist: 6.1 };
 
   function applyQuality(high) {
-    if (cframe) { cframe.enabled = high; }
-    lights.sun.light.shadowResolution = high ? 2048 : 1024;
-    lights.sun.light.numCascades = high ? 2 : 1;
+    look.setQuality(high ? 'high' : 'low');
     $('btn-quality').textContent = 'FX ' + (high ? 'high' : 'low');
   }
   let quality = !(/Mobi|Android/i.test(navigator.userAgent));
@@ -244,19 +254,14 @@ async function boot() {
     player.keys.clear();
     player.trigger = false;
     // restore defaults
-    range.world.enabled = true;
+    range.world.enabled = m === 'play';
     range.props.enabled = m === 'play';
-    app.scene.fog.start = m === 'studio' ? 7 : 28;
-    app.scene.fog.end = m === 'studio' ? 24 : 90;
-    lights.sun.enabled = true; lights.fill.enabled = true; refLight.enabled = false;
-    app.scene.ambientLight = new pc.Color(0.46, 0.49, 0.55);
-    app.scene.fog.type = pc.FOG_LINEAR;
-    camera.camera.clearColor = SKY;
+    cyc.enabled = m === 'studio';
     camera.camera.fov = 55;
-    applyQuality(quality);
+    view.kick = 0;
+    look.setMode(m, { refLit: $('opt-reflight').checked });
     ch.anim.speed = 1;
     setWire(false);
-    aimLights(lights, 215, 50);
     if (m === 'play') {
       player.enabled = true;
       ch.root.setLocalPosition(player.pos);
@@ -278,33 +283,13 @@ async function boot() {
       } else {
         ch.equip(null);
         ch.root.setLocalEulerAngles(0, 0, 0);
-        range.world.enabled = false;
-        lights.sun.enabled = false; lights.fill.enabled = false;
-        applyRefLight($('opt-reflight').checked);
-        if (cframe) cframe.enabled = false;
         ch.playBase('Idle', 0, 0);
         ch.anim.speed = $('opt-refanim').checked ? 1 : 0;
       }
     }
-    if (prev === 'ref' && m !== 'ref') { app.scene.fog.type = pc.FOG_LINEAR; }
   }
 
-  function applyRefLight(on) {
-    refLight.enabled = on;
-    lights.sun.enabled = !on; lights.fill.enabled = !on;
-    if (on) {
-      app.scene.ambientLight = new pc.Color(0.941, 0.941, 0.941);
-      app.scene.fog.type = pc.FOG_NONE;
-      camera.camera.clearColor = new pc.Color(0.925, 0.937, 0.957);
-      if (cframe) cframe.enabled = false;
-    } else {
-      app.scene.ambientLight = new pc.Color(0.46, 0.49, 0.55);
-      app.scene.fog.type = pc.FOG_NONE;
-      camera.camera.clearColor = new pc.Color(0.925, 0.937, 0.957);
-      if (cframe) cframe.enabled = quality;
-    }
-  }
-  $('opt-reflight').addEventListener('change', (e) => { if (mode === 'ref') applyRefLight(e.target.checked); });
+  $('opt-reflight').addEventListener('change', (e) => { if (mode === 'ref') look.setRefLight(e.target.checked); });
   $('opt-refanim').addEventListener('change', (e) => { if (mode === 'ref') ch.anim.speed = e.target.checked ? 1 : 0; });
 
   function playStudioClip(name) {
@@ -350,8 +335,15 @@ async function boot() {
   // ---------------------------------------------------------------- input
   const touch = window.matchMedia('(pointer: coarse)').matches;
   if (touch) { $('touch').hidden = false; document.body.classList.add('touch-on'); $('lock-hint').textContent = 'Left stick moves (push fully to run). Drag the scene to look around.'; }
+  const setStyle = (st) => {
+    look.setStyle(st);
+    document.querySelectorAll('[data-style]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.style === st)));
+  };
+  document.querySelectorAll('[data-style]').forEach((b) => b.addEventListener('click', () => setStyle(b.dataset.style)));
   window.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+    if (e.code === 'Backquote' && !e.repeat) { dbg.toggle(); return; }
+    if (e.code === 'KeyV' && !e.repeat) { setStyle(look.style === 'comic' ? 'pbr' : 'comic'); return; }
     if (mode === 'play') {
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && !challenge.active) {
@@ -448,7 +440,6 @@ async function boot() {
   }
 
   // ---------------------------------------------------------------- loop
-  let statT = 0, statT0 = performance.now(), frames = 0;
   const lineCols = { mid: new pc.Color(0.9, 0.76, 0.25), L: new pc.Color(0.2, 0.77, 0.7), R: new pc.Color(0.85, 0.45, 0.55) };
   const axes = (node, s) => {
     const p = node.getPosition();
@@ -468,10 +459,10 @@ async function boot() {
       player.updateCamera(dt);
       score.update(dt);
       challenge.update(dt);
-      camera.camera.fov = view.baseFov + player.fovKick;
+      if (view.kick !== player.fovKick) { view.kick = player.fovKick; camera.camera.camera._projMatDirty = true; }
       if (player.weapon && !player.dead && !(player.action && player.action.full)) {
         const cam = camera.camera, W = canvas.clientWidth, H = canvas.clientHeight;
-        const focal = (cam.horizontalFov ? W / 2 : H / 2) / Math.tan(cam.fov * D2R / 2);
+        const focal = (cam.horizontalFov ? W / 2 : H / 2) / Math.tan((cam.fov + view.kick) * D2R / 2);
         const r = player.aimRay();
         const h = player.raycastWorld(r.from, r.dir, 120);
         juice.crosshair(true, Math.tan(player.currentSpread() * D2R) * focal, !!(h && h.target && (h.target.kind === 'dummy' || !h.target.dead)));
@@ -488,7 +479,7 @@ async function boot() {
       }
       ui.transportState(m.loop ? t % m.duration : Math.min(t, m.duration), m.duration, studio.playing);
       const yaw = studio.yaw * D2R, pitch = studio.pitch * D2R;
-      aimLights(lights, studio.yaw + 38, 48);            // key light rides with the studio camera
+      look.aimStudio(studio.yaw);                         // key light rides with the studio camera
       const tgt = new pc.Vec3(0, 0.95, 0);
       const fit = view.area ? Math.min(1.8, view.area.H / Math.max(1, view.area.y1 - view.area.y0)) : 1;
       const dist = studio.dist * fit;
@@ -515,15 +506,7 @@ async function boot() {
     targets.update(dt);
     decals.update();
     if (mode === 'play' && (player.reload || player.firing)) refreshWeapon();
-    frames++;
-    const nowT = performance.now();
-    statT = (nowT - statT0) / 1000;
-    if (statT > 0.5) {
-      statT0 = nowT;
-      const s = app.stats;
-      ui.stats(Math.round(frames / statT), s.drawCalls.total, (s.vram.totalUsed / 1048576).toFixed(1));
-      statT = 0; frames = 0;
-    }
+    dbg.update();
   });
 
   // small screens start with the key list folded away
@@ -536,7 +519,7 @@ async function boot() {
   $('ref-over').src = assetURL('reference.png', 'image/png');
   ui.setMode('play', false);
   ui.ready();
-  window.__app = { app, ch, player, ui, enterMode, studio, juice, score, challenge, targets, decals, fx };
+  window.__app = { app, ch, player, ui, enterMode, studio, juice, score, challenge, targets, decals, fx, look, dbg, setStyle };
   window.__ready = true;
   const start = (location.hash || '').replace('#', '');
   if (start === 'studio' || start === 'ref') enterMode(start);

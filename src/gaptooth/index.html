@@ -28,13 +28,17 @@
     </div>
     <nav class="modes" role="tablist" aria-label="Mode">
       <button role="tab" id="tab-play" data-mode="play" aria-selected="true">Play</button>
-      <button role="tab" id="tab-studio" data-mode="studio" aria-selected="false">Animation studio</button>
-      <button role="tab" id="tab-ref" data-mode="ref" aria-selected="false">Reference match</button>
+      <button role="tab" id="tab-studio" data-mode="studio" aria-selected="false"><span class="lg">Animation </span>studio</button>
+      <button role="tab" id="tab-ref" data-mode="ref" aria-selected="false">Reference<span class="lg"> match</span></button>
     </nav>
-    <div class="stats" id="stats" aria-label="Renderer stats">
+    <button class="stats" id="stats" aria-expanded="false" aria-controls="dbg" title="Performance (`)">
       <span><b id="st-fps">–</b> fps</span>
+      <span><b id="st-tri">–</b> tris</span>
       <span><b id="st-dc">–</b> draws</span>
-      <span><b id="st-tri">–</b> MB VRAM</span>
+    </button>
+    <div class="seg look-seg" role="radiogroup" aria-label="Render style" title="Render style (V)">
+      <button role="radio" data-style="pbr" aria-checked="true" title="Physically based lighting">PBR</button>
+      <button role="radio" data-style="comic" aria-checked="false" title="Cel shading with ink lines">Comic</button>
     </div>
     <div class="top-actions">
       <button class="icon-btn" id="btn-sound" aria-pressed="true" title="Sound on/off">Sound on</button>
@@ -42,6 +46,16 @@
       <button class="icon-btn" id="btn-info" aria-expanded="false" aria-controls="panel-info">Specs</button>
     </div>
   </header>
+
+  <section class="dbg" id="dbg" hidden aria-label="Performance">
+    <div class="dbg-head">
+      <span class="dbg-title">Performance</span>
+      <span class="dbg-fps"><b id="dbg-fps">–</b> fps</span>
+      <button class="collapse" id="dbg-close" title="Close (`)">×</button>
+    </div>
+    <canvas id="dbg-graph" aria-label="Frame times, last 150 frames"></canvas>
+    <dl class="dbg-rows" id="dbg-rows"></dl>
+  </section>
 
   <!-- PLAY -->
   <aside class="panel left" id="panel-play" data-mode="play">
@@ -61,6 +75,7 @@
         <div><dt><kbd>R</kbd></dt><dd>reload</dd></div>
         <div><dt><kbd>F</kbd><kbd>G</kbd></dt><dd>wave, dance</dd></div>
         <div><dt><kbd>K</kbd></dt><dd>knockout</dd></div>
+        <div><dt><kbd>V</kbd></dt><dd>comic style</dd></div>
       </dl>
       <p class="hint" id="lock-hint">Click the scene to aim with the mouse. <kbd>Esc</kbd> releases it.</p>
       <button class="cta wide" id="btn-challenge">Start 60-second score attack <kbd>Enter</kbd></button>
@@ -131,7 +146,7 @@
         <label class="chk"><input type="checkbox" id="opt-refanim"> Animate idle</label>
       </div>
       <dl class="specs mini">
-        <div><dt>Silhouette match</dt><dd>91.2% IoU at 406 × 668</dd></div>
+        <div><dt>Silhouette match</dt><dd>90.9% IoU at 406 × 668</dd></div>
         <div><dt>Grid</dt><dd>1 voxel = 4 cm, 4 texels per voxel</dd></div>
         <div><dt>Body</dt><dd>9 × 6 voxels, 47.5 tall (1.90 m)</dd></div>
         <div><dt>Palette</dt><dd id="ref-palette"></dd></div>

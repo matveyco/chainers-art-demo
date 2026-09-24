@@ -4,11 +4,11 @@
  "character": {
   "file": "character.glb",
   "height_m": 1.9,
-  "verts": 604,
-  "quads": 302,
+  "verts": 2728,
+  "tris": 3628,
   "atlas": [
    256,
-   256
+   512
   ]
  },
  "clips": [
@@ -369,7 +369,7 @@
     128,
     128
    ],
-   "tris": 184
+   "tris": 1196
   },
   {
    "name": "SMG",
@@ -402,7 +402,7 @@
     128,
     128
    ],
-   "tris": 232
+   "tris": 1540
   },
   {
    "name": "Shotgun",
@@ -435,7 +435,7 @@
     128,
     128
    ],
-   "tris": 212
+   "tris": 1412
   },
   {
    "name": "Launcher",
@@ -463,7 +463,7 @@
     128,
     256
    ],
-   "tris": 172
+   "tris": 1168
   }
  ]
 }

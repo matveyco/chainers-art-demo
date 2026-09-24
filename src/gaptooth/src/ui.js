@@ -119,10 +119,6 @@ export class UI {
     this._toastT = setTimeout(() => t.classList.remove('on'), ms);
   }
 
-  stats(fps, dc, vram) {
-    $('st-fps').textContent = fps; $('st-dc').textContent = dc; $('st-tri').textContent = vram;
-  }
-
   // ---------------------------------------------------------------- studio
   _buildClips() {
     const root = $('clip-groups');
@@ -190,10 +186,12 @@ export class UI {
       <section class="info-sec">
         <h3>Character</h3>
         <dl class="specs">
-          <div><dt>Mesh</dt><dd>${ch.verts} verts · ${ch.quads * 2} tris · 1 draw call</dd></div>
-          <div><dt>Material</dt><dd>1 PBR, ${ch.atlas[0]}×${ch.atlas[1]} pixel atlas, nearest filter</dd></div>
+          <div><dt>Mesh</dt><dd>${ch.verts} verts · ${ch.tris} tris · 1 draw call</dd></div>
+          <div><dt>Edges</dt><dd>every convex edge chamfered 1.2 cm, authored normals round the chamfers</dd></div>
+          <div><dt>Material</dt><dd>1 PBR material: ${ch.atlas[0]}×${ch.atlas[1]} pixel atlas + metal/roughness map (vinyl skin, cotton, leather, rubber soles)</dd></div>
           <div><dt>Skeleton</dt><dd>19 joints (16 deform + root + 2 grip sockets)</dd></div>
-          <div><dt>Skinning</dt><dd>rigid boxes, 1 u blend loops at neck, spine, elbows, wrists, knees, ankles</dd></div>
+          <div><dt>Limbs</dt><dd>rigid segments that pivot over rounded joint cores at elbows, wrists and knees</dd></div>
+          <div><dt>Body</dt><dd>smooth weights over three bend zones, an edge loop every 2 cm</dd></div>
           <div><dt>Animation</dt><dd>${clipsN} clips · ${totalFrames} frames · int16 rotations</dd></div>
           <div><dt>Scale</dt><dd>1 voxel = 4 cm · height ${ch.height_m} m · +Z forward</dd></div>
         </dl>
@@ -220,6 +218,16 @@ export class UI {
           <div><dt>Aim</dt><dd>crosshair drawn from the real spread cone, turns red on targets</dd></div>
           <div><dt>Feedback</dt><dd>damage numbers, headshots ×2, combos, callouts, local best score</dd></div>
           <div><dt>Rendering</dt><dd>FX on GPU instancing (1 draw per material), bullet holes in one dynamic mesh</dd></div>
+        </dl>
+      </section>
+      <section class="info-sec">
+        <h3>Look</h3>
+        <dl class="specs">
+          <div><dt>Light</dt><dd>image-based lighting from a procedural sky and a light-tent studio, built on the GPU at start-up</dd></div>
+          <div><dt>Shadows</dt><dd>PCF 5×5, three texel-snapped cascades; recoil FOV kick goes through the projection so cascades never resize</dd></div>
+          <div><dt>Post</dt><dd>MSAA 4×, SSAO, bloom, neutral tone mapping, grading (FX high)</dd></div>
+          <div><dt>Comic</dt><dd>cel-banded sun, crisp terminators, flat ambient, rim light, ink lines from the depth buffer (<kbd>V</kbd>)</dd></div>
+          <div><dt>Debug</dt><dd>fps, frame graph, draw calls, triangles drawn (<kbd>\`</kbd> or the counter)</dd></div>
         </dl>
       </section>
       <section class="info-sec">
