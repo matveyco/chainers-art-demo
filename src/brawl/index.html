@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Chainers Brawl</title>
+<link rel="stylesheet" href="src/fonts.css">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gl" tabindex="0" aria-label="Chainers Brawl arena"></canvas>
+  <div class="ouch-fx" aria-hidden="true"></div>
+
+  <!-- LOADING -->
+  <div class="loader" id="loader">
+    <img class="loader-logo" id="loader-logo" alt="Chainers Brawl" width="480" height="274">
+    <div class="loader-bar"><i id="loader-fill"></i></div>
+    <p class="loader-text" id="loader-text">Loading</p>
+  </div>
+
+  <!-- TOP BAR (lobby and match) -->
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <span class="brand-mark">CHAINERS</span>
+      <span class="brand-sub">Brawl demo</span>
+    </div>
+    <button class="stats" id="stats" aria-expanded="false" aria-controls="dbg" title="Performance (`)">
+      <span><b id="st-fps">–</b> fps</span>
+      <span><b id="st-tri">–</b> tris</span>
+      <span><b id="st-dc">–</b> draws</span>
+    </button>
+    <div class="seg" id="style-seg" role="radiogroup" aria-label="Graphics style" title="Graphics style (V)">
+      <button role="radio" data-style="toon" aria-checked="true" title="Cel shading with ink outlines">Toon</button>
+      <button role="radio" data-style="pbr" aria-checked="false" title="Physically based lighting, SSAO and bloom">PBR</button>
+      <button role="radio" data-style="pixel" aria-checked="false" title="Low-resolution pixel art render">Pixel</button>
+    </div>
+    <button class="icon-btn" id="btn-sound" aria-pressed="true" title="Sound on/off">Sound on</button>
+    <button class="icon-btn" id="btn-leave" hidden title="Leave the match">Leave</button>
+  </header>
+
+  <section class="dbg" id="dbg" hidden aria-label="Performance">
+    <div class="dbg-head">
+      <span class="dbg-title">Performance</span>
+      <span class="dbg-fps"><b id="dbg-fps">–</b> fps</span>
+      <button class="collapse" id="dbg-close" title="Close (`)">×</button>
+    </div>
+    <canvas id="dbg-graph" aria-label="Frame times, last 150 frames"></canvas>
+    <dl class="dbg-rows" id="dbg-rows"></dl>
+  </section>
+
+  <!-- LOBBY -->
+  <section class="lobby" id="lobby" hidden aria-label="Choose a brawler">
+    <div class="lobby-col">
+      <img class="lobby-logo" id="lobby-logo" alt="Chainers Brawl" width="480" height="274">
+      <p class="mode-chip" id="mode-chip"><span class="gem-ico" aria-hidden="true"></span><span id="mode-name">Gem Grab · 3 vs 3 · bots</span></p>
+      <h1 class="pick-h">Choose your Chainer</h1>
+      <div class="roster" id="roster" role="radiogroup" aria-label="Brawlers"></div>
+      <div class="bio" id="bio"></div>
+    </div>
+    <div class="lobby-go">
+      <div class="seg modes" id="mode-seg" role="radiogroup" aria-label="Game mode">
+        <button role="radio" data-mode="gemgrab" aria-checked="true">Gem Grab</button>
+        <button role="radio" data-mode="showdown" aria-checked="false">Showdown</button>
+      </div>
+      <div class="seg diff" id="diff-seg" role="radiogroup" aria-label="Bot difficulty">
+        <button role="radio" data-diff="easy" aria-checked="false">Easy</button>
+        <button role="radio" data-diff="normal" aria-checked="true">Normal</button>
+        <button role="radio" data-diff="hard" aria-checked="false">Hard</button>
+      </div>
+      <button class="play-btn" id="btn-play">Play</button>
+      <p class="rules" id="rules">Grab gems from the mine. Hold <b>10</b> as a team for <b>15 s</b> to win. Knocked-out brawlers drop every gem they carry.</p>
+    </div>
+  </section>
+
+  <!-- VS SPLASH -->
+  <section class="vs" id="vs" hidden aria-hidden="true">
+    <div class="vs-side red" id="vs-red"></div>
+    <div class="vs-mid"><b>VS</b></div>
+    <div class="vs-side blue" id="vs-blue"></div>
+  </section>
+
+  <!-- MATCH HUD -->
+  <section class="hud" id="hud" hidden>
+    <div class="scorebar">
+      <div class="team blue"><div class="team-dots" id="dots-blue"></div><div class="gems"><span class="gem-ico" aria-hidden="true"></span><b id="gems-blue">0</b></div></div>
+      <div class="clock" id="clock">2:30</div>
+      <div class="team red"><div class="gems"><b id="gems-red">0</b><span class="gem-ico" aria-hidden="true"></span></div><div class="team-dots" id="dots-red"></div></div>
+    </div>
+    <div class="sdbar" id="sdbar" hidden>
+      <div class="sd-left"><span class="sd-ico" aria-hidden="true"></span><b id="sd-left">6</b><small>left</small></div>
+      <div class="sd-cubes"><span class="cube-ico" aria-hidden="true"></span><b id="sd-cubes">0</b><small>power</small></div>
+    </div>
+    <div class="gaswarn" id="gaswarn" hidden>Poison gas! Get to the middle</div>
+    <div class="gemcd" id="gem-countdown" hidden></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+    <div class="bars" id="bars"></div>
+    <div class="nums" id="nums"></div>
+    <div class="banner" id="banner"></div>
+    <div class="respawn" id="respawn" hidden><small>Respawning in</small><b id="respawn-n">4</b></div>
+    <p class="hint" id="hint"><kbd>WASD</kbd> move · aim with the mouse · <kbd>click</kbd> shoot (hold to keep firing) · hold <kbd>right click</kbd> or <kbd>Space</kbd>, release for the super · <kbd>Q</kbd> quick shot</p>
+    <div class="superbtn" id="superbtn" title="Super (right click, Space or E)"><span>Super</span></div>
+    <div class="touch" id="touch" hidden>
+      <div class="zone-move" id="zone-move"></div>
+      <div class="stick move" id="stick-move"><i></i></div>
+      <div class="stick super" id="stick-super"><i></i><span>Super</span></div>
+      <div class="stick attack" id="stick-attack"><i></i></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="results" id="results" hidden aria-label="Match results">
+    <div class="res-card">
+      <h2 class="res-title" id="res-title">Victory!</h2>
+      <p class="res-sub" id="res-sub"></p>
+      <div class="res-teams" id="res-teams"></div>
+      <div class="res-actions">
+        <button class="play-btn" id="btn-again">Play again</button>
+        <button class="ghost-btn" id="btn-lobby">Change brawler</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="rotate-hint" id="rotate-hint" hidden>Turn your phone sideways for the full arena</div>
+</div>
+<script src="engine/playcanvas.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
