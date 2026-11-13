@@ -4,6 +4,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 
 | Demo | URL | What it shows |
 |---|---|---|
+| Chainers Homestead | [/demos/homestead/](https://chainers.art/demos/homestead/) | A home-building game: clear a forest clearing, farm, give Chainers orders, house Wanderers, send parties on foot to the frontier, automate the work with supply lines, pack crates for a reward pool and trade on an exchange (accounts, pool and exchange are simulated in the browser). Four seasons, phone-first UI. Built with PlayCanvas. |
 | Chainers Brawl | [/demos/brawl/](https://chainers.art/demos/brawl/) | Top-down brawler against bots: Gem Grab (3 vs 3) and Solo Showdown (six players, power boxes, closing gas). Four Chainers with their own outfits, weapons and supers, bushes to hide in, breakable walls, toon / PBR / pixel-art graphics, twin-stick touch controls. Built with PlayCanvas. |
 | Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range with toon VFX, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
 
@@ -15,7 +16,7 @@ site/                     static root, served as is
   assets/                 favicon, shared fonts (OFL)
   vendor/playcanvas/      engine build shared by all demos (MIT)
   demos/<slug>/           one folder per demo
-src/<slug>/               demo sources (ES modules, styles, page template): gaptooth, brawl
+src/<slug>/               demo sources (ES modules, styles, page template): gaptooth, brawl, homestead
 tools/build.mjs           bundles src/<slug> into site/demos/<slug> (all demos, or the slugs given)
 nginx/                    config for the site container
 compose.yml               the site container (nginx, localhost:4190)
@@ -51,6 +52,15 @@ Any static server also works (`npx serve site`), without the production headers.
 - **Arenas**: Gem Grab 17 × 29 tiles, Showdown 29 × 29, both mirrored both ways. The floor is baked into one pixel-art texture at start-up (grass and packed sand mixed by a noise mask, a light checker, contact shade at wall feet, wet sand round the ponds); walls and bushes are chamfered voxel blocks merged per material. Bushes sway, part around brawlers walking through them and turn see-through (dithered) round the player; the see-through circle lowers the scene alpha so the ink pass leaves it clean. The gas is a ground overlay shader with a bright rim, a translucent curtain along the edges and clouds rolling off the boundary. Water is a small toon shader with foam along the banks.
 - **Graphics**: `Toon` (cel light, crisp shadows, ink lines), `PBR` (SSAO, bloom, soft grade) and `Pixel` (the toon look rendered at about a quarter of the resolution and scaled up with hard pixels). Switch in the top bar or with `V`.
 - **Controls**: WASD and the mouse (click to shoot, hold right click or Space and release for the super, Q for a quick shot at the nearest enemy); on touch, a floating move stick and attack and super sticks that aim while dragged and fire on release (a tap fires at the nearest enemy).
+
+## Chainers Homestead: what is in the build
+
+- **The game**: a fenced clearing you build up (14 kinds of building, 13 kinds of decor, land to expand), Chainers with five stats and traits that you give orders to, Wanderers who visit and stay if fed, a farm, workshops, and supply lines that automate feeding, planting, harvesting and crafting, also while you are away.
+- **Frontier**: one large map beyond your gate with four zones and places that come and go. Parties walk the trails; you pick the team, an approach and transport, follow them on the map, and open a chest with a lucky draw when they return.
+- **Economy**: crates uploaded to a reward pool that pays every 30 minutes, and an exchange with moving prices. In this demo both are simulated locally, there are no accounts or wallets, and progress is saved in the browser only.
+- **World**: locations have no edges (painted ground, forest to the horizon, distance haze). Four seasons re-light the world and recolour foliage and snow in the shader; nothing is rebuilt when the season turns.
+- **UI**: designed for a phone first. Sticker icons rendered from the game models, one-list build menu, buildings placed where you point, illustrated first-run cards, a mute button always in reach.
+- **Layout here**: it bundles its own PlayCanvas (2.24) into `app.<hash>.js` as an ES module. Models, textures and icons are in `assets/` and requested with `?v=<hash>`; sounds are in `audio/` so they are served with an audio type. Sources and assets are copied in from the game's own project, so edit there, not here.
 
 ## Edit a demo
 

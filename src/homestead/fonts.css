@@ -1,0 +1,8 @@
+/* Self-hosted latin subset (SIL OFL): Geologica. */
+@font-face { font-family: "Geologica"; font-style: normal; font-weight: 500; font-display: swap; src: url(/assets/fonts/geologica-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Geologica"; font-style: normal; font-weight: 700; font-display: swap; src: url(/assets/fonts/geologica-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Geologica"; font-style: normal; font-weight: 900; font-display: swap; src: url(/assets/fonts/geologica-latin-900-normal.woff2) format("woff2"); }
+/* the way back to the demos hub, shown on the login screen only */
+.hub-back { position: fixed; left: 14px; top: 12px; z-index: 200; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 14px 6px 10px; border-radius: 14px; background: #fffbe8; color: #4c2f17; font: 900 14px/1 "Geologica", system-ui, sans-serif; text-decoration: none; box-shadow: 0 0 0 3px #fffdf4, 0 5px 0 0 rgba(60, 30, 12, .28); }
+.hub-back span { font-size: 20px; line-height: 1; }
+#login.out ~ .hub-back { display: none; }
