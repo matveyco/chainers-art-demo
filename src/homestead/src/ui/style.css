@@ -771,3 +771,28 @@ button.tag { pointer-events: auto; cursor: pointer; border: 0; font-family: inhe
 .au-req { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .au-req li { font-size: 12.5px; font-weight: 900; padding: 4px 10px; border-radius: 10px; background: var(--paper); } .au-req li.ok { color: var(--olive); } .au-req li.no { color: var(--alert); }
 .au-buy { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; } .au-buy .btn { flex: 1 1 150px; }
+
+/* ---- storage, sources, land (v6) ---- */
+.st-row { pointer-events: auto; width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: var(--inset); border-radius: 14px; padding: 6px 12px 6px 8px; margin-bottom: 6px; min-height: 50px; }
+.st-row > .ic { width: 34px; height: 34px; flex: none; } .st-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; } .st-nm b { font-size: 15px; font-weight: 900; color: var(--ink); } .st-nm em { font-style: normal; font-size: 11px; font-weight: 900; color: var(--alert); }
+.st-row .bar { width: 84px; flex: none; } .st-n { flex: none; min-width: 84px; text-align: right; font-size: 13px; font-weight: 700; color: var(--ink-2); } .st-n b { font-size: 15px; font-weight: 900; color: var(--ink); }
+.st-row.full { background: #f8d9cf; } .st-row.full .st-n b { color: var(--alert); }
+.st-opt { display: flex; align-items: center; gap: 10px; background: var(--inset); border-radius: 14px; padding: 6px 10px 6px 6px; margin-bottom: 6px; } .st-opt > .ic { width: 40px; height: 40px; flex: none; }
+.st-opt b { display: block; font-size: 14px; font-weight: 900; color: var(--ink); } .st-opt small { font-size: 12.5px; font-weight: 700; color: var(--ink-2); } .st-opt small i { font-style: normal; font-weight: 900; color: var(--olive); font-size: 14px; }
+.st-lock { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 900; color: var(--ink-2); } .st-lock .ic { width: 16px; height: 16px; }
+.src-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.src-side { background: var(--inset); border-radius: 16px; padding: 10px 12px; } .src-side.out { background: #e3ecc4; }
+.src-side > b { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 900; color: var(--navy); text-transform: uppercase; } .src-side p { margin: 6px 0 0; font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.src-row { display: flex; gap: 10px; align-items: flex-start; background: var(--inset); border-radius: 14px; padding: 8px 10px; margin-bottom: 6px; } .src-row.hi { box-shadow: 0 0 0 3px var(--amber); background: #fff3c9; }
+.src-row > .ic { width: 40px; height: 40px; flex: none; } .src-row b { font-size: 15px; font-weight: 900; color: var(--ink); }
+.src-row small { display: flex; align-items: flex-start; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--ink); line-height: 1.3; margin-top: 3px; } .src-row small .ic { width: 16px; height: 16px; flex: none; } .src-row small i { font-style: normal; font-weight: 900; color: var(--ink-2); flex: none; }
+.panel.sheet-up.short { max-height: 56vh; top: auto; bottom: 16px; transform: translateX(-50%); }
+.land-what { margin: 0 0 10px; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--ink); } .land-what b { font-weight: 900; color: var(--navy); }
+.land-buy { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; } .land-buy .btn { flex: 1 1 160px; }
+@media (max-width: 860px) { .panel.sheet-up.short { transform: none; bottom: 0; } }
+@media (max-width: 520px) { .src-vs { grid-template-columns: 1fr; } .st-row .bar { width: 56px; } .st-n { min-width: 74px; } }
+.scrim:has(+ .panel.short) { background: transparent; }      /* the Expand sheet must not dim the land it is pointing at */
+
+.mk.timer .pill small { font-size: 10.5px; font-weight: 900; color: var(--ink-2); margin-right: -2px; } .mk.pool .pill small { font-size: 11px; font-weight: 700; color: var(--eth-l); margin-right: -3px; }
+.c-lost { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 12px; padding: 7px 10px; border-radius: 12px; background: #f8d9cf; color: var(--alert); font-size: 13px; font-weight: 900; } .c-lost .ic { width: 22px; height: 22px; }
+.trip-note { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }

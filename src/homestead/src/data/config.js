@@ -17,6 +17,17 @@ export const RES = {
   bricks:  { name: 'Bricks',    icon: 'res_bricks',  tier: 'refined', value: 5,   color: '#d8684f', store: 'warehouse' },
   ingot:   { name: 'Ingots',    icon: 'res_ingot',   tier: 'refined', value: 14,  color: '#9fb0c4', store: 'warehouse' },
 };
+// Where a resource comes from, told to the player. home: on your own land. out: beyond the gate.
+export const RES_SOURCES = {
+  wood:    { home: 'Chop trees, logs and stumps on your land. New ones grow back, slowly.', out: 'Whispering Woods: one squad brings home several trees\' worth.' },
+  stone:   { home: 'Mine rocks on your land. New ones turn up, slowly.', out: 'Whispering Woods and Stonebreak Ridge: big loads.' },
+  bio:     { home: 'Farm Plots are the main source. Bushes give a little.', out: 'Meadows and thickets in the Frontier.' },
+  ore:     { home: 'Rare Ore Rocks on your land.', out: 'Stonebreak Ridge (Expedition Lodge level 2): the real source.' },
+  crystal: { home: 'Protoflowers on a high-level farm.', out: 'Sunken Ruins (Lodge level 3) and lucky finds in loot.' },
+  planks:  { home: 'The Sawmill makes them from Wood.', out: 'Sometimes in Frontier loot.' },
+  bricks:  { home: 'The Stonecutter makes them from Stone.', out: 'Sometimes in Frontier loot.' },
+  ingot:   { home: 'The Smelter makes them from Ore.', out: 'Sometimes in Frontier loot.' },
+};
 export const RES_ORDER = ['wood', 'stone', 'bio', 'ore', 'planks', 'bricks', 'ingot', 'crystal'];
 export const HUD_RES = ['wood', 'stone', 'bio', 'ore', 'planks', 'bricks', 'ingot', 'crystal'];
 export const BASE_CAP = { wood: 300, stone: 300, bio: 300, ore: 150, crystal: 20, planks: 80, bricks: 80, ingot: 40 };

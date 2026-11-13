@@ -211,6 +211,28 @@ export class HomeWorld {
     const inner = (GRID / 2 + RING) * TILE;
     this.island.forest({ inner, radius: 120, clearAt: (x, z) => (x > inner - 1 || z > inner - 1) && Math.max(x, z) < inner + 9 });
   }
+  /** Amber strip on the ground: the tiles the next expansion would add. */
+  showExpand(on) {
+    if (this._exp) { this._exp.destroy(); this._exp = null; }
+    if (!on || !this.game.landCost()) return;
+    const h = this.game.half(), n = h + 1, e = ent('expand');
+    // drawn over everything (no depth test): tree crowns would otherwise hide most of the strip from this camera
+    if (!this._expMat) { const m0 = this.engine.flatMaterial('#ffb21e', { unlit: true, opacity: 0.72 }).clone(); m0._canon = true; m0.depthTest = false; m0.depthWrite = false; m0.update(); this._expMat = m0; }
+    const mat = this._expMat;
+    const strip = (x0, z0, x1, z1) => {      // tiles from the centre
+      const q = ent('s');
+      q.addComponent('render', { type: 'plane', material: mat, castShadows: false, receiveShadows: false, layers: [pc.LAYERID_UI] });      // after the world, so nothing covers it
+      q.setLocalScale((x1 - x0) * TILE, 1, (z1 - z0) * TILE);
+      q.setLocalPosition((x0 + x1) / 2 * TILE, 0.09, (z0 + z1) / 2 * TILE);
+      e.addChild(q);
+    };
+    strip(-n, -n, n, -h); strip(-n, h, n, n); strip(-n, -h, -h, h); strip(h, -h, n, h);
+    this.root.addChild(e);
+    this._exp = e;
+    // pull back until the whole yard and its new strip are in view, above the sheet (a portrait phone sees a narrow slice)
+    const cv = this.engine.canvas, tall = cv.height > cv.width;
+    this.engine.focus(this.origin.x, this.origin.z + n * TILE * (tall ? 0.9 : 0.55), clamp(n * TILE * (tall ? 7 : 3.4), 40, 104));
+  }
   _landSigns() {
     if (this._signs) for (const s of this._signs) s.destroy();
     this._signs = [];
@@ -625,7 +647,7 @@ export class HomeWorld {
     });
     bus.on('guest:arrive', (c) => { this._addAvatar(c, true); sfx('arrive'); });
     bus.on('chainer:leave', (c, how) => this._removeAvatar(c, how));
-    bus.on('guest:fed', (c, auto) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('hearts', v.x, 2.0, v.z, 9, 1, { shape: 'fountain', angle: 30, delay: 0.4 }); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('yum'); if (auto) this.cb.toast && this.cb.toast(`${c.name} was fed by the Camp Kitchen`, 'good', 'item_food_bowl'); });
+    bus.on('guest:fed', (c, auto) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('hearts', v.x, 2.0, v.z, 9, 1, { shape: 'fountain', angle: 30, delay: 0.4 }); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('yum'); if (auto) this.cb.toast && this.cb.toast(`${c.name} was fed by Auto-feed`, 'good', 'item_food_bowl'); });
     bus.on('chainer:recruited', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.cheer(v.x, 2.4, v.z); this.fx.burst('confetti', v.x, 2.2, v.z, 26, 1.2, { shape: 'fountain', angle: 34, delay: 0.14 }); v.emoteT = 1.6; v.emoteKind = 'cheer'; } sfx('fanfare'); });
     bus.on('chainer:levelup', (c) => { const v = this.aviews.get(c.id); if (v && v.av.entity.enabled) { this.fx.cheer(v.x, 2.4, v.z); v.emoteT = 1.5; v.emoteKind = 'cheer'; } });
     bus.on('chainer:trained', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.cheer(v.x, 2.4, v.z); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('upgrade'); });
@@ -823,7 +845,7 @@ export class HomeWorld {
       }
       if (b.type === 'farm_plot') {
         if (!b.crop) out.push({ key: 'plant' + b.id, kind: 'action', x: c.x, y: top, z: c.z, icon: 'crop_sprout', act: 'plant', id: b.id, pulse: true, label: 'Plant' });
-        else if (now >= b.readyAt) out.push({ key: 'harv' + b.id, kind: 'action', x: c.x, y: top + 0.4, z: c.z, icon: 'res_bio', act: 'harvest', id: b.id, bounce: true, label: 'Harvest +' + g.farmYield(b) });
+        else if (now >= b.readyAt) out.push({ key: 'harv' + b.id, kind: 'action', x: c.x, y: top + 0.4, z: c.z, icon: 'res_bio', act: 'harvest', id: b.id, bounce: true, label: Math.floor(g.s.res.bio) >= g.capOf('bio') ? 'Storage full' : 'Harvest +' + g.farmYield(b) });
         else out.push({ key: 'grow' + b.id, kind: 'timer', x: c.x, y: top, z: c.z, p: clamp((now - b.plantedAt) / (b.readyAt - b.plantedAt), 0, 1), left: b.readyAt - now, icon: CROPS[b.crop].model, small: true });
       } else if (d.recipe) {
         if (b.stored > 0) out.push({ key: 'col' + b.id, kind: 'action', x: c.x, y: top, z: c.z, icon: 'res_' + Object.keys(d.recipe.out)[0].replace('ingot', 'ingot'), act: 'collect', id: b.id, bounce: true, label: 'Collect ' + b.stored * Object.values(d.recipe.out)[0] });
@@ -835,7 +857,7 @@ export class HomeWorld {
       } else if (b.type === 'pool_shrine') {
         out.push({ key: 'pool' + b.id, kind: 'pool', x: c.x, y: top + 0.6, z: c.z, left: g.epochLeft(), id: b.id });
       } else if (b.type === 'camp') {
-        if (g.guests().length < g.guestSlots() && g.s.guestTimer > now) out.push({ key: 'camp' + b.id, kind: 'timer', x: c.x, y: top - 1.2, z: c.z, p: 0, left: g.s.guestTimer - now, icon: 'item_flag', small: true, noBar: true });
+        if (g.guests().length < g.guestSlots() && g.s.guestTimer > now) out.push({ key: 'camp' + b.id, kind: 'timer', x: c.x, y: top - 1.2, z: c.z, p: 0, left: g.s.guestTimer - now, icon: 'item_flag', small: true, noBar: true, pre: 'Visitor in' });
       }
       // nothing else to do here, and it can be upgraded: say so
       if (this._up.ok.has(b.id) && !out.slice(n0).some(m => m.kind === 'action')) out.push({ key: 'up' + b.id, kind: 'action', x: c.x, y: top + (out.length - n0 > 1 ? 1.5 : 0), z: c.z, icon: 'item_arrow_up', alt: 'item_star', act: 'building', id: b.id, up: true, small: true, label: 'Upgrade' });

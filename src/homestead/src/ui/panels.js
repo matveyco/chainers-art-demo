@@ -1,5 +1,6 @@
 // All panels and UI actions.
 import {
+  RES_SOURCES,
   AUTO_LINES,
   BUILD_GROUPS, BUILD_USE, BUILD_NEXT,
   RES, RES_ORDER, CRATES, STATS, STAT_KEYS, ACTIVITIES, RARITY, RARITY_ORDER, TRAITS, WISHES, COSY_TIERS, BUILDINGS, BUILD_CATS,
@@ -112,22 +113,55 @@ export const PANELS = {
 
   // ---- storage (the barn sticker) -------------------------------------------------------------
   storage: {
-    cls: 'narrow',
+    cls: 'sheet-up',
     render(ui) {
       const g = ui.game, s = g.s;
       const rows = RES_ORDER.map((k) => {
-        const v = Math.floor(s.res[k] || 0), cap = g.capOf(k);
-        return `<div class="line">${ic(RES[k].icon, 34)}<b class="grow">${RES[k].name}</b><div class="bar ${v >= cap ? '' : 'green'}" style="width:110px"><i style="width:${clamp(v / cap * 100, 0, 100)}%"></i></div><span style="min-width:86px;text-align:right"><b>${fmt(v)}</b> <span class="muted">/ ${fmt(cap)}</span></span></div>`;
+        const v = Math.floor(s.res[k] || 0), cap = g.capOf(k), full = v >= cap;
+        return `<button class="st-row ${full ? 'full' : ''}" data-act="open" data-panel="sources" data-k="${k}" aria-label="${RES[k].name}: ${v} of ${cap}. Where to get it">${ic(RES[k].icon, 34)}<span class="st-nm"><b>${RES[k].name}</b>${full ? '<em>Full · more is lost</em>' : ''}</span><span class="bar ${full ? '' : 'green'}"><i style="width:${clamp(v / cap * 100, 0, 100)}%"></i></span><span class="st-n"><b>${fmt(v)}</b> / ${fmt(cap)}</span></button>`;
+      }).join('');
+      // more room: every way to raise a cap, with the number you would have afterwards
+      const more = [['wood', 'Wood, Stone and goods'], ['bio', 'Biopoints']].map(([k, label]) => {
+        const now = g.capOf(k), opts = g.storageOptions(k);
+        const list = opts.map((o) => {
+          const b = o.id ? g.building(o.id) : null, chk = o.locked ? null : b ? g.checkUpgrade(b) : g.checkBuild(o.type);
+          const btn = o.locked ? `<span class="st-lock">${ic('item_lock', 16)}Locked</span>` : b ? `<button class="btn sm ${chk.ok ? '' : 'ghost'}" data-act="focusBuilding" data-id="${b.id}">Upgrade</button>` : `<button class="btn sm ${chk.ok ? '' : 'ghost'}" data-act="buildPick" data-type="${o.type}">Build</button>`;
+          return `<div class="st-opt">${ic(BUILDINGS[o.type].icon, 40)}<span class="grow"><b>${o.text}</b><small>${RES[k].name} ${fmt(now)} → <i>${fmt(o.cap)}</i></small></span>${btn}</div>`;
+        }).join('') || `<div class="st-opt">${ic(BUILDINGS[k === 'bio' ? 'granary' : 'warehouse'].icon, 40)}<span class="grow"><b>At maximum</b><small>${RES[k].name} ${fmt(now)}</small></span></div>`;
+        return `<h3>More room for ${label}</h3>${list}`;
       }).join('');
       const crates = Object.keys(CRATES).map(k => `<div class="line">${ic(CRATES[k].icon, 34)}<b class="grow">${CRATES[k].name}</b><span class="muted">${CRATES[k].points} points each</span><b style="min-width:40px;text-align:right">${s.crates[k] || 0}</b></div>`).join('');
       const up = g.upkeepPerMin();
-      return `${head('ui_storage', 'Storage', 'Warehouse: more of everything. Granary: more Biopoints')}
-        <div class="body">
+      return `${head('ui_storage', 'Storage', 'Full means lost: anything over the limit is wasted')}
+        <div class="body blist">
           ${rows}
-          <h3 style="margin-top:14px">Crates for the Reward Pool</h3>
+          <p class="muted" style="margin:4px 2px 0">Tap a resource to see where to get it.</p>
+          ${more}
+          <h3>Crates for the Reward Pool</h3>
           ${crates}
           <div class="sheet" style="margin-top:12px"><div class="row">${ic('item_food_bowl', 34)}<div><b>Upkeep ${(up * 60).toFixed(0)} Biopoints / hour</b><div class="muted">Every Chainer and fed Wanderer eats. At 0 Biopoints they get hungry and work at 70%.</div></div></div></div>
         </div>`;
+    },
+  },
+
+  // ---- where resources come from ----------------------------------------------------------------
+  sources: {
+    cls: 'sheet-up',
+    render(ui, args) {
+      const g = ui.game, lodge = !!g.lodge();
+      const mine = g.s.clearables.filter((c) => g.isUnlocked(c.x, c.z)).length;
+      const woods = (g.s.pois.woods || []).filter((p) => Object.keys(p.loot)[0] === 'wood').map((p) => p.loot.wood);
+      const trip = woods.length ? `${Math.min(...woods.map((w) => w[0]))}–${Math.max(...woods.map((w) => w[1]))}` : '50–90';
+      const rows = RES_ORDER.map((k) => `<div class="src-row ${args.k === k ? 'hi' : ''}" id="src-${k}">${ic(RES[k].icon, 40)}<span class="grow"><b>${RES[k].name}</b>
+        <small>${ic('item_house', 16)}<i>Your land</i> ${RES_SOURCES[k].home}</small><small>${ic('ui_expeditions', 16, '', 'item_compass')}<i>Frontier</i> ${RES_SOURCES[k].out}</small></span></div>`).join('');
+      return `${head('ui_storage', 'Where resources come from', 'Your land gives a little, forever. The Frontier gives a lot.')}
+        <div class="body blist">
+          <div class="src-vs">
+            <div class="src-side"><b>${ic('item_house', 22)}Your land</b><p>${mine} trees, rocks and bushes to clear right now. A new one grows every minute or two, so it never runs out, but it is slow: about 10–20 per tap.</p><p>More land means more of them. Past your fence they are locked until you expand.</p></div>
+            <div class="src-side out"><b>${ic('ui_expeditions', 22, '', 'item_compass')}Frontier</b><p>Outside your gate. Send a squad and it walks there, works and walks back with loot: about ${trip} Wood from one trip to the woods.</p><p>The only real source of Ore and Crystal. A squad is away for a few minutes and then rests, so chop at home first and send squads when your land is picked clean.</p></div>
+          </div>
+          ${lodge ? `<button class="btn green wide" data-act="expeditions">${ic('ui_expeditions', 26, '', 'item_compass')}Go to Frontier</button>` : `<button class="btn wide" data-act="buildPick" data-type="balloon_dock">${ic('trail_lodge', 26, '', 'item_compass')}Build the Expedition Lodge to open the Frontier</button>`}
+          <h3>Each resource</h3>${rows}</div>`;
     },
   },
 
@@ -181,7 +215,7 @@ export const PANELS = {
         let cta;
         if (!hasB) cta = `<button class="btn" data-act="buildPick" data-type="${U.at[0]}">Build the ${BUILDINGS[U.at[0]].name}</button>`;
         else if (!lvlOk) cta = `<button class="btn ghost" data-act="open" data-panel="level">Reach level ${U.level} · how?</button>`;
-        else if (!canPay) { const m = chk.miss; cta = `<button class="btn off" data-act="buyUpg" data-k="${k}">${m && m !== 'eth' ? `Need ${fmt(Math.ceil(U.cost[m] - (s.res[m] || 0)))} more ${resName(m)}` : 'Not enough yet'}</button>`; }
+        else if (!canPay) { const m = chk.miss; cta = `<button class="btn ghost" data-act="open" data-panel="sources" data-k="${m}">${m && m !== 'eth' ? `Need ${fmt(Math.ceil(U.cost[m] - (s.res[m] || 0)))} more ${resName(m)} · where?` : 'Not enough yet'}</button>`; }
         else cta = `<button class="btn green" data-act="buyUpg" data-k="${k}">Unlock</button>`;
         return `<div class="au-card locked ${chk.ok ? 'ready' : ''}"><div class="au-top">${head2}</div>
           <ul class="au-req">${req(hasB, `${BUILDINGS[U.at[0]].name}${U.at.length > 1 ? ' (or ' + U.at.slice(1).map((t) => BUILDINGS[t].name).join(', ') + ')' : ''} built`)}${req(lvlOk, `Homestead level ${U.level}${lvlOk ? '' : ` (you are ${s.level})`}`)}</ul>
@@ -505,13 +539,21 @@ export const PANELS = {
 
   // ---- land ----------------------------------------------------------------------------------
   land: {
-    cls: 'narrow',
+    cls: 'sheet-up short',
     render(ui) {
       const g = ui.game, c = g.landCost();
       if (!c) return `${head('item_flag', 'Land')}<div class="body"><p>Your land is at max size. Nothing left to unlock.</p></div>`;
-      return `${head('item_flag', 'Expand your land', `Expansion ${g.s.land + 1} of ${LAND.rings.length}`)}
-        <div class="body"><p>Adds one tile on every side: more room to build, and new trees and rocks to clear.</p><div>${ui.costHtml(c, { noTime: true })}</div></div>
-        <footer><button class="btn green ${g.canAfford(c) ? '' : 'off'}" data-act="expand">Expand</button></footer>`;
+      const P = g.landPreview(), ok = g.canAfford(c), miss = ok ? null : g.missing(c)[0];
+      const give = Object.entries(P.give).map(([k, n]) => `<span>${ic(resIcon(k), 20)}about ${fmt(n)}</span>`).join('');
+      return `${head('item_flag', 'Expand your land', `Expansion ${g.s.land + 1} of ${LAND.rings.length} · the amber strip on the ground`)}
+        <div class="body">
+          <ul class="land-what">
+            <li><b>Your fence moves out 1 tile on every side.</b> ${(P.from * 2)} × ${(P.from * 2)} tiles becomes ${(P.to * 2)} × ${(P.to * 2)}: ${P.tiles} more tiles to build on.</li>
+            <li><b>${P.count} trees, rocks and bushes</b> standing there become yours to clear${give ? `: <span class="cost">${give}</span>` : '.'}</li>
+            <li>After that, new ones keep growing on your land, and a bigger land holds more of them.</li>
+          </ul>
+          <div class="land-buy">${ui.costHtml(c, { noTime: true })}${ok ? '<button class="btn green" data-act="expand">Expand</button>' : miss && miss !== 'eth' ? `<button class="btn ghost" data-act="open" data-panel="sources" data-k="${miss}">Need ${fmt(Math.ceil(c.res[miss] - (g.s.res[miss] || 0)))} more ${resName(miss)} · where?</button>` : '<button class="btn ghost" data-act="open" data-panel="pool">Needs ETH from the Reward Pool</button>'}</div>
+        </div>`;
     },
   },
 
@@ -691,7 +733,11 @@ export const ACTIONS = {
     else if (h === 'pool') ui.open('pool');
     else if (h === 'land') ui.open('land');
     else if (h === 'home') { const b = g.first('home'); ui.home.focusBuilding(b, 46); ui.openCtx('building', b.id); }
-    else if (h === 'clear') ui.toast('Tap a tree, rock or bush on your land', '', 'item_axe');
+    else if (h === 'clear') {      // show one, do not just say it
+      const g = ui.game, cl = g.s.clearables.find((c) => !c.by && g.isUnlocked(c.x, c.z) && c.type.startsWith('tree')) || g.s.clearables.find((c) => !c.by && g.isUnlocked(c.x, c.z));
+      if (cl) { ui.engine.focus(ui.home.tx(cl.x + 0.5), ui.home.tx(cl.z + 0.5), 26); ui.toast(`Tap this ${CLEARABLES[cl.type].name.toLowerCase()} and a Chainer clears it. They grow back slowly`, '', 'item_axe'); }
+      else ui.toast('Nothing to clear right now. New trees and rocks grow back in a minute or two', '', 'item_axe');
+    }
   },
 
   // ---- markers in the world -------------------------------------------------------------------
@@ -717,6 +763,7 @@ export const ACTIONS = {
   },
 
   // ---- building -------------------------------------------------------------------------------
+  celebrateStore(ui) { ui.closeCelebration(); ui.open('storage'); },
   buildCan(ui) { if (ui.modal) { ui.modal.state.can = !ui.modal.state.can; ui.refreshModal(true); } },
   buildJump(ui, d) { const el = document.getElementById('bg-' + d.id); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   buildPick(ui, d) {

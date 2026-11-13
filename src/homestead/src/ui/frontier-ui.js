@@ -87,6 +87,7 @@ export const FRONTIER_UI = {
         ${cond ? `<div class="cond">${ic(cond.icon, 34)}<div><b>${cond.name}</b><small>${cond.desc}</small></div></div>` : ''}
         <h3>Possible loot</h3>
         <div class="loot-range">${lootRange(poi.loot, ev.n ? ev.lootMul : APPROACH[st.approach].loot * TRANSPORT[st.transport].carry)}</div>
+        <p class="trip-note">Your squad is away ${fmtTime(ev.time)} and then rests. They cannot work at home meanwhile.</p>
         <h3>Squad <span>${st.team.length} / ${T.team}</span><button class="btn sm ghost" data-act="planBest">Best squad</button></h3>
         <div class="slots">${slots}</div>
         ${bench ? `<div class="benches">${bench}</div>` : '<p class="muted">No one else is free.</p>'}
@@ -169,7 +170,7 @@ export const FRONTIER_UI = {
         <div class="banner"><small>${T.name}</small><h1>${titles[r.outcome]}</h1><p>${subs[r.outcome]}</p><div class="lchips">${chips}</div></div>
         <p class="tap">Tap the chest</p>
         <div class="lcards">${cards}</div>
-        ${r.loot._full ? `<p class="full">${ic('ui_storage', 22)}Storage is full. Some loot was lost. Upgrade the Warehouse or Granary.</p>` : ''}
+        ${r.loot._full ? `<p class="full">${ic('ui_storage', 22)}Storage full: ${Object.entries(r.loot._lost || {}).map(([k, n]) => `${fmt(n)} ${resName(k)}`).join(', ') || 'some loot'} lost. Get more storage.</p>` : ''}
         <div class="lteam">${team}</div>
         <div class="draw">
           <h2>Lucky draw <small>pick one card</small></h2>

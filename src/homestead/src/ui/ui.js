@@ -93,6 +93,17 @@ export class UI {
     });
     bus.on('chainer:change', () => { this._modalDirty = true; this._hudDirty = true; });
     bus.on('levelup', (lvl, reward) => this.celebrate({ title: `Level ${lvl}!`, hero: 'item_star', text: 'Homestead level up. Your reward:', loot: reward, sfx: 'levelup', button: 'Claim' }));
+    bus.on('waste', (lost) => {      // storage is a hard limit: say what was lost, at most every few seconds
+      this._hudDirty = true;
+      this._lost = this._lost || {};
+      for (const k in lost) this._lost[k] = (this._lost[k] || 0) + lost[k];
+      if (this._lostT) return;
+      this._lostT = setTimeout(() => {
+        const L = this._lost; this._lost = null; this._lostT = 0;
+        const txt = Object.entries(L).map(([k, n]) => `${fmt(n)} ${resName(k)}`).join(', ');
+        this.toast(`Storage full. Lost ${txt}`, 'bad', 'ui_storage');
+      }, 900);
+    });
     bus.on('guest:arrive', (c) => { this._hudDirty = true; this.toast(`New Wanderer: ${c.name} (${RARITY[c.rarity].name})`, c.rarity === 'common' ? '' : 'good', 'item_flag'); });
     bus.on('chainer:leave', (c, how, gift) => {
       this._hudDirty = true; this._modalDirty = true;
@@ -206,6 +217,8 @@ export class UI {
         <div class="rw"><small>Reward</small>${Object.entries(q.reward).map(([k, v]) => `<span>${ic(resIcon(k), 22)}${fmt(v)}</span>`).join('')}<em>${pr.done ? 'Claim' : 'Go'}</em></div>
       </button>`;
     }
+    const fullK = ['wood', 'stone', 'bio'].filter((k) => Math.floor(s.res[k] || 0) >= g.capOf(k));
+    if (fullK.length && home) side += `<button class="mini alert" data-act="open" data-panel="storage">${ic('ui_storage', 26)}<span><b>${fullK.map((k) => RES[k].name).join(', ')} full.</b> Anything more is lost. Get more storage</span></button>`;
     if (s.hungry && home) side += `<button class="mini alert" data-act="hint" data-hint="farm">${ic('res_bio', 26)}<span><b>Chainers are hungry.</b> Harvest crops for Biopoints</span></button>`;
     this._set('hud-left', side);
     // --- parties on the frontier: always in sight ------------------------------------------------
@@ -268,7 +281,7 @@ export class UI {
   }
   _mkSig(m) {
     if (m.kind === 'action') return `a|${m.icon}|${m.label || ''}|${m.act}|${m.up ? 1 : 0}`;
-    if (m.kind === 'timer') return `t|${m.icon}|${m.noBar ? 1 : 0}|${m.help ? 1 : 0}`;
+    if (m.kind === 'timer') return `t|${m.icon}|${m.noBar ? 1 : 0}|${m.help ? 1 : 0}|${m.pre || ''}`;
     if (m.kind === 'tag') return `g|${m.text}|${m.mood}|${m.owned ? 1 : 0}|${m.level}|${m.sel ? 1 : 0}|${m.hungry ? 1 : 0}`;
     if (m.kind === 'lvl') return `l|${m.level}|${m.max ? 1 : 0}`;
     if (m.kind === 'poi') return FRONTIER_UI.pinSig(this, m);
@@ -278,7 +291,7 @@ export class UI {
   }
   _mkHtml(m) {
     if (m.kind === 'action') return `<div class="in"><div class="bub" data-act="marker" data-m="${m.act}" data-id="${m.id}" data-quiet="1">${ic(m.icon, 38, '', m.alt || '')}</div>${m.label ? `<span class="lab">${m.label}</span>` : ''}</div>`;
-    if (m.kind === 'timer') return `<div class="in"><div class="pill">${ic(m.icon, 20)}<span class="tm">${fmtTime(m.left)}</span>${m.help ? ic('tool_hammer', 16, '', 'item_hammer') : ''}</div>${m.noBar ? '' : `<div class="tb"><i style="width:${(m.p * 100).toFixed(0)}%"></i></div>`}</div>`;
+    if (m.kind === 'timer') return `<div class="in"><div class="pill">${ic(m.icon, 20)}${m.pre ? `<small>${m.pre}</small>` : ''}<span class="tm">${fmtTime(m.left)}</span>${m.help ? ic('tool_hammer', 16, '', 'item_hammer') : ''}</div>${m.noBar ? '' : `<div class="tb"><i style="width:${(m.p * 100).toFixed(0)}%"></i></div>`}</div>`;
     if (m.kind === 'tag') {
       // yours: navy with the level. A visitor: cream, edged in the colour of their rarity, and how long they stay
       return m.owned
@@ -286,7 +299,7 @@ export class UI {
         : `<div class="in"><button class="pill guest ${m.hungry ? 'hungry' : ''}" style="--rc:${RARITY[m.rarity].color}" data-act="marker" data-m="chainer" data-id="${m.id}" data-quiet="1">${m.mood === 'delighted' ? ic('item_heart', 14) : ''}<b>${esc(m.text)}</b><i>${m.hungry ? 'Hungry' : 'Wanderer'}</i><span class="tm">${fmtTime(m.left)}</span></button></div>`;
     }
     if (m.kind === 'lvl') return `<div class="in"><span class="lvp ${m.max ? 'max' : ''}">Lv ${m.level}</span></div>`;
-    if (m.kind === 'pool') return `<div class="in"><div class="pill" data-act="open" data-panel="pool">${ic('item_eth', 24)}<span class="tm">${fmtClock(m.left)}</span></div></div>`;
+    if (m.kind === 'pool') return `<div class="in"><div class="pill" data-act="open" data-panel="pool">${ic('item_eth', 24)}<small>Payout in</small><span class="tm">${fmtClock(m.left)}</span></div></div>`;
     if (m.kind === 'poi') return FRONTIER_UI.pin(this, m);
     if (m.kind === 'party') return FRONTIER_UI.partyPin(this, m);
     if (m.kind === 'zone') return FRONTIER_UI.zonePin(this, m);
@@ -368,7 +381,7 @@ export class UI {
       }
       i++;
     }
-    if (got._full) this.toast('Storage is full. Some was lost. Upgrade the Warehouse or Granary', 'bad');
+
   }
   /** A paper ribbon that names the new season while the world turns. */
   seasonBanner(id) {
@@ -388,6 +401,8 @@ export class UI {
     const d = document.createElement('div');
     d.className = 'celebrate';
     const loot = c.loot ? `<div class="gifts">${Object.entries(c.loot).filter(([k, v]) => v && !k.startsWith('_')).map(([k, v], i) => `<div class="it" style="animation-delay:${0.25 + i * 0.09}s">${ic(resIcon(k), 40)}${k === 'eth' ? fmtEth(v, 6) : '+' + fmt(v)}</div>`).join('')}</div>` : '';
+    const lostMap = c.loot && c.loot._lost;
+    if (lostMap) c.html = (c.html || '') + `<p class="c-lost">${ic('ui_storage', 22)}<span>Storage full: ${Object.entries(lostMap).map(([k, n]) => `${fmt(n)} ${resName(k)}`).join(', ')} lost.</span><button class="btn sm" data-act="celebrateStore">Get more storage</button></p>`;
     d.innerHTML = `<div class="card"><div class="rays"></div>${c.hero ? `<div class="hero">${c.heroImg ? `<img src="${c.heroImg}">` : ic(c.hero, 120, '', c.heroAlt || '')}</div>` : ''}
       <h1 class="${c.titleCls || ''}">${esc(c.title)}</h1>${c.text ? `<p>${esc(c.text)}</p>` : ''}${c.html || ''}${loot}
       <button class="btn green" data-act="celebrateOk">${c.button || 'Awesome!'}</button></div>`;
@@ -424,6 +439,7 @@ export class UI {
     const root = this.el['modal-root'];
     root.innerHTML = `<div class="scrim" data-act="closeModal" data-quiet="1"></div><div class="panel ${P.cls || ''}" id="panel"></div>`;
     this.refreshModal(true);
+    if (name === 'land') this.home.showExpand(true);      // the strip you would get lights up on the ground
     this.sfx.play('open');
   }
   refreshModal(first = false) {
@@ -442,6 +458,7 @@ export class UI {
   }
   closeModal() {
     if (!this.modal) return;
+    if (this.modal.name === 'land') this.home.showExpand(false);
     this.modal = null;
     this.el['modal-root'].innerHTML = '';
     this.sfx.play('close');
@@ -538,6 +555,11 @@ export class UI {
       this.frontier.show();
       const r = this.engine.rig; r.cur.copy(r.target); r.curDist = r.dist + 26;
       if (then) { then(); r.cur.copy(r.target); }
+      if (!then) {      // arrive looking at a place you can go to, not at empty ground
+        const near = this.game.allPois().filter((p) => this.game.regionOpen(REGIONS.find((r) => r.id === p.region))).sort((x, y) => x.dist - y.dist)[0];
+        if (near) { this.frontier.focusPoi(near.id, 46); const rg = this.engine.rig; rg.cur.copy(rg.target); }
+        if (!this.game.s.seenFrontier) { this.game.s.seenFrontier = true; this.toast('Tap a place to send a squad. Each place shows the loot you can bring home', '', 'item_compass'); }
+      }
       this.renderExpBar();
       this.renderHud();
       if (this.sfx.ambience) this.sfx.ambience('frontier');
@@ -743,13 +765,10 @@ export class UI {
   coachNext(skip) { if (!this._coach) return; if (skip) this._coach.i = 1e9; else this._coach.i++; this._coachShow(); }
   tour() {
     this.coach([
-      { sel: '#hud-left .quest', title: 'Your next quest', text: 'Quests teach you the game and give rewards. Tap the card to go to the right place.' },
-      { sel: '#hud-right .tool:not(.fr)', title: 'Build', text: 'All buildings in one list: what each one does, what it costs and how to unlock it. The top card is what to build next.' },
-      { sel: '#hud-right .tool.fr', title: 'Frontier', text: 'Loot and resources come from here. Build the Expedition Lodge, send a squad and claim the loot when they are back.' },
-      { sel: '.snav [data-act="sound"]', title: 'Sound', text: 'Tap to mute. Tap again to turn the sound on.' },
-      { sel: '.snav [data-panel="roster"]', title: 'Your Chainers', text: 'All your Chainers and Wanderers. You can also tap a Chainer in the yard to give orders.' },
-      { sel: '.snav [data-panel="supply"]', title: 'Automation', text: 'Upgrades for your buildings that do the tapping for you: plant, harvest, feed, craft and upload. A badge shows when one can be unlocked.' },
-      { sel: '.snav [data-panel="level"]', title: 'Quests and level', text: 'Your Homestead level, how to earn XP, what each level unlocks and what to do next.' },
+      { sel: '#hud-left .quest', title: 'Your next quest', text: 'Quests teach you the game and give rewards. Tap Go and it takes you to the right place.' },
+      { sel: '#hud-right .tool:not(.fr)', title: 'Build', text: 'All buildings in one list: what each one is for, what it costs and how to unlock it. The top card is what to build next.' },
+      { sel: '#hud-right .tool.fr', title: 'Frontier', text: 'Your land gives a little Wood and Stone, forever: trees and rocks grow back slowly. The Frontier, outside your gate, gives a lot. Build the Expedition Lodge to send a squad there.' },
+      { sel: '.respill', title: 'Storage', text: 'Tap here for your Storage. When it is full, anything more is lost, so build a Warehouse and a Granary. Tap any resource to see where to get it.' },
     ]);
   }
 

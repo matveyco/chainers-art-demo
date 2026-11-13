@@ -109,6 +109,7 @@ export class Game {
     return s;
   }
   _afterLoad() {
+    for (const k in this.s.res) this.s.res[k] = Math.min(this.s.res[k], this.capOf(k));      // storage is a hard limit now: trim what an old save held above it
     const s = this.s;
     for (const reg of REGIONS) if (!s.pois[reg.id]) s.pois[reg.id] = [];
     // saves from before the frontier: places and trips had no trail; start the frontier fresh and bring everyone home
@@ -223,19 +224,33 @@ export class Game {
     for (const w of this.byType('warehouse')) mul += BUILDINGS.warehouse.capMul[w.level - 1];
     return Math.round(cap * mul);
   }
+  /** Ways to get more room for a resource: [{ type, id?, text, cap }] with the cap you would have after each. */
+  storageOptions(k) {
+    const type = k === 'bio' ? 'granary' : 'warehouse', d = BUILDINGS[type], now = this.capOf(k), out = [];
+    const step = (lv) => (k === 'bio' ? d.bioCap[lv - 1] : Math.round((BASE_CAP[k] || 0) * d.capMul[lv - 1]));
+    for (const b of this.byType(type)) {
+      if (b.level >= d.maxLevel || b.level < 1) continue;
+      out.push({ type, id: b.id, text: `Upgrade the ${d.name} to level ${b.level + 1}`, cap: now - step(b.level) + step(b.level + 1) });
+    }
+    if (this.countOf(type) < this.maxOf(type)) out.push({ type, text: `Build ${this.countOf(type) ? 'another' : 'a'} ${d.name}`, cap: now + step(1) });
+    else if (!out.length) { const nx = Array.isArray(d.max) ? d.max.findIndex(m => m > this.countOf(type)) : -1; if (nx >= 0) out.push({ type, locked: true, text: `Another ${d.name} at Chainer Home level ${nx + 1}`, cap: now + step(1) }); }
+    return out.sort((x, y) => x.cap - y.cap);
+  }
   /** Adds resources respecting caps. Returns what was actually added. */
   give(map, opts = {}) {
     const got = {};
     for (const k in map) {
       if (k === 'eth') { this.s.eth += map[k]; got[k] = map[k]; continue; }
       if (CRATES[k]) { this.s.crates[k] += map[k]; got[k] = map[k]; continue; }
-      const room = opts.overflow ? Infinity : Math.max(0, this.capOf(k) - (this.s.res[k] || 0));
+      // Storage is a hard limit, for rewards too: what does not fit is lost, and the player is told (build more storage)
+      const room = Math.max(0, this.capOf(k) - (this.s.res[k] || 0));
       const add = Math.min(room, Math.floor(map[k]));
       this.s.res[k] = (this.s.res[k] || 0) + add;
       got[k] = add;
-      if (add < Math.floor(map[k])) got._full = true;
+      if (add < Math.floor(map[k])) { got._full = true; (got._lost = got._lost || {})[k] = Math.floor(map[k]) - add; }
     }
     this.bus.emit('res');
+    if (got._lost && !opts.quiet) this.bus.emit('waste', got._lost);
     return got;
   }
   addXp(n) {
@@ -245,8 +260,8 @@ export class Game {
     while (s.xp >= xpForLevel(s.level)) { s.xp -= xpForLevel(s.level); s.level++; up = true; }
     if (up) {
       const reward = { bio: 40 + s.level * 15, wood: 30 + s.level * 10, stone: 30 + s.level * 10 };
-      this.give(reward, { overflow: true });
-      this.bus.emit('levelup', s.level, reward);
+      const got = this.give(reward, { quiet: true });      // the card itself says what a full Storage cost you
+      this.bus.emit('levelup', s.level, got);
     }
     this.bus.emit('xp');
   }
@@ -340,6 +355,19 @@ export class Game {
   // ------------------------------------------------------------------------------------------
   // land
   // ------------------------------------------------------------------------------------------
+  /** What the next expansion adds: tiles, and the trees, rocks and bushes standing on them with what they hold. */
+  landPreview() {
+    const h = this.half(), c = GRID / 2, n = h + LAND.ringTiles;
+    const inNew = (x, z) => x >= c - n && x < c + n && z >= c - n && z < c + n && !this.isUnlocked(x, z);
+    const out = { tiles: (2 * n) * (2 * n) - (2 * h) * (2 * h), count: 0, give: {}, from: h, to: n };
+    for (const cl of this.s.clearables) {
+      if (!inNew(cl.x, cl.z)) continue;
+      out.count++;
+      const g = (CLEARABLES[cl.type] || {}).give || {};
+      for (const k in g) out.give[k] = (out.give[k] || 0) + Math.round((g[k][0] + g[k][1]) / 2);
+    }
+    return out;
+  }
   landCost() { const r = LAND.rings[this.s.land]; return r ? { res: r.cost, eth: r.eth } : null; }
   expandLand() {
     const c = this.landCost();
@@ -374,6 +402,14 @@ export class Game {
       if (d < 3.6) continue;                    // keep the heart of the home clear
       const yard = this.isUnlocked(x, z);
       if (r() < (yard ? 0.12 : 0.27)) s.clearables.push({ id: uid('c'), type: weighted(yard ? CLEARABLE_WEIGHTS_YARD : CLEARABLE_WEIGHTS, r), x, z, rot: Math.floor(r() * 4), sc: 0.85 + r() * 0.3 });
+    }
+    // the first quest says "tap a tree": make sure a new player's own land has trees to tap (at least three)
+    const mineTrees = () => s.clearables.filter(cl => cl.type.startsWith('tree') && this.isUnlocked(cl.x, cl.z)).length;
+    for (let tries = 0; tries < 400 && mineTrees() < 3; tries++) {
+      const h = this.half(), x = Math.floor(c - h + r() * h * 2), z = Math.floor(c - h + r() * h * 2);
+      const d = Math.max(Math.abs(x - c + 0.5), Math.abs(z - c + 0.5));
+      if (d < 3.6 || occ.has(x + ',' + z) || apron.has(x + ',' + z) || s.clearables.some(cl => cl.x === x && cl.z === z)) continue;
+      s.clearables.push({ id: uid('c'), type: ['tree_a', 'tree_b', 'tree_pine'][Math.floor(r() * 3)], x, z, rot: Math.floor(r() * 4), sc: 0.85 + r() * 0.3 });
     }
   }
   startClear(cid, whoId = null) {
@@ -1398,12 +1434,13 @@ export class Game {
     else if (g.cosy) { max = g.cosy; cur = this.cosy(); }
     else if (g.upg) { cur = this.hasUpg(g.upg) ? 1 : 0; }
     else { const k = Object.keys(g)[0]; max = g[k]; cur = c[k] || 0; }
+    if (max < 1) return { cur: cur >= max ? 1 : 0, max: 1, done: cur >= max };      // "earn any ETH": show 0 / 1, not 0 / 0.0000001
     return { cur: Math.min(cur, max), max, done: cur >= max };
   }
   claimQuest() {
     const q = this.quest();
     if (!q || !this.questProgress(q).done) return { ok: false };
-    const got = this.give(q.reward, { overflow: true });
+    const got = this.give(q.reward, { quiet: true });
     this.s.quest.idx++;
     this.addXp(25);
     this.bus.emit('quest:claimed', q, got);

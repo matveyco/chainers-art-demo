@@ -114,7 +114,7 @@ function start(user) {
       // with a Chainer picked, that one goes; otherwise whoever is nearest
       const picked = ui.ctxPanel && ui.ctxPanel.kind === 'chainer' ? ui.ctxPanel.id : null;
       const r = game.startClear(c.id, picked);
-      if (!r.ok) { if (r.locked) ui.open('land'); else ui.fail(r); return; }
+      if (!r.ok) { if (r.locked) { ui.toast('That one is past your fence. Expand your land to reach it', '', 'item_flag'); ui.open('land'); } else ui.fail(r); return; }
       sfx.play(picked ? 'order' : 'click');
       const cv = home.cviews.get(c.id); if (cv) fx.squash(cv.m, 0.12, 0.3, c.sc);
       ui.toast(`${r.who.name} is clearing: ${CLEARABLES[c.type].name}`, '', 'item_axe');
