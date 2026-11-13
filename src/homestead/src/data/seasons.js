@@ -1,6 +1,6 @@
 // The four seasons. Autumn is the look of the Chainers Farm reference screenshots and is what the models
 // and textures were made for; the other three re-light the world, repaint the ground with their own
-// texture set (tools/process_textures3.py), recolour foliage in the shader and add weather.
+// texture set (tools/process_textures4.py), recolour foliage in the shader and add weather.
 //
 // Art direction: one world, one light family. Every season keeps autumn's low golden sun, its warm earth
 // and its dark bark, and moves only part of the palette. Greens are the reference's dark olive
@@ -22,6 +22,7 @@ export const SEASONS = {
     sky: ['#7aa3c6', '#b3cbd6', '#f2e2c4', '#f6d9b2', '#efc49c', '#dcaa82'],
     cloud: ['#fff5e8', '#ffe8d2', '#ffeadb', '#f6d2b6'],            // [diffuse A, glow A, diffuse B, glow B]
     ground: { dirt: 'dirt_spring', floor: 'floor_spring', grass: 'grass_spring', sand: 'sand_spring', stone: 'rock', soil: 'soil', water: 'floor_spring' },
+    worn: '#5f544f', fallen: { amount: 0.55, big: false, colors: [['#d2b2bc', '#e3e0da'], ['#dae2d8', '#e3e8e0']] },      // ground painter: damp trodden earth, petals
     lip: '#f4e2c8', water: 'water', grass: 0.55,
     leaf: {
       shade: '#3a3f1c', glow: 0.9,
@@ -46,6 +47,7 @@ export const SEASONS = {
     sky: ['#5f93c2', '#a3c4d6', '#f3e2b6', '#f7d79c', '#f0c283', '#dba868'],
     cloud: ['#fff4e0', '#ffe6c2', '#ffe9cc', '#f6cf9e'],
     ground: { dirt: 'dirt_summer', floor: 'floor_summer', grass: 'grass_summer', sand: 'sand_summer', stone: 'rock', soil: 'soil', water: 'floor_summer' },
+    worn: '#756c62', fallen: { amount: 0.3, big: false, colors: [['#857c4f', '#a09762'], ['#5c7c3f', '#7b9154']] },       // a few dry leaves
     lip: '#f4e2c8', water: 'water', grass: 0.46,
     leaf: {
       shade: '#232c12', glow: 0.6,
@@ -70,6 +72,7 @@ export const SEASONS = {
     sky: ['#6f9cc4', '#a9c6da', '#f1dcba', '#f6d3a4', '#eebd8c', '#d9a070'],
     cloud: ['#fff4e4', '#ffe6c8', '#ffe9d2', '#f6cfa6'],
     ground: { dirt: 'dirt', floor: 'floor', grass: 'grass', sand: 'sand', stone: 'rock', soil: 'soil', water: 'floor' },
+    worn: '#6e645e', fallen: { amount: 1, colors: [['#af7529', '#c5913a'], ['#a06129', '#b67835'], ['#bfa136', '#d7b846'], ['#856349', '#9a724e']] },      // the reference's dark packed earth and maple leaves
     lip: '#f4e2c8', water: 'water', grass: 0.6,
     leaf: null,
     tuft: ['#b8742c', '#c98a3c', '#a5621f'],
@@ -88,6 +91,7 @@ export const SEASONS = {
     sky: ['#8496bc', '#b8bfd4', '#f0dcc8', '#f4cfae', '#e9b89c', '#cfa294'],
     cloud: ['#fbeee2', '#f6dcc8', '#f1e2dc', '#e2c8c4'],
     ground: { dirt: 'snow', floor: 'snow_floor', grass: 'snow_grass', sand: 'snow_path', stone: 'rock_snow', soil: 'soil', water: 'snow_floor' },
+    worn: null, fallen: { amount: 0.4, colors: [['#6b5e59', '#857264'], ['#7b7262', '#958b71']] },                         // the last brown leaves on the snow
     lip: '#f4e2c8', water: 'ice', grass: 0.52,
     leaf: {
       shade: '#2e2428', glow: 0.6, snow: 0.29,                        // snow: how much of a crown's top is covered

@@ -122,6 +122,10 @@ export class Engine {
   _canon(m) {
     if (!m || m._canon) return m;
     if ((m.name || '').startsWith('tint_')) return m;
+    // a GLB carries its own copy of every texture it uses: swap in the shared one from assets/textures (same name),
+    // so there is one of each on the GPU and a texture can be retuned without rebuilding the models
+    const shared = m.diffuseMap && this.textures.get((m.diffuseMap.name || '').replace(/-\d+$/, ''));      // "wood_g-12" -> wood_g
+    if (shared && shared !== m.diffuseMap) m.diffuseMap = shared;
     const c = (x) => (x ? `${x.r.toFixed(3)},${x.g.toFixed(3)},${x.b.toFixed(3)}` : '-');
     const leaf = (m.name || '').startsWith('leafc');      // leaf cards + canopy cores: glow a little, like the reference foliage
     const key = `${m.diffuseMap ? m.diffuseMap.name : '-'}|${c(m.diffuse)}|${c(m.emissive)}|${(m.emissiveIntensity || 0).toFixed(2)}|${m.emissiveMap ? m.emissiveMap.name : '-'}|${(m.opacity ?? 1).toFixed(2)}|${m.blendType}|${leaf ? 'leaf' : ''}`;
@@ -158,9 +162,21 @@ export class Engine {
     if (mis.length) list.push({ mis, ph: Math.random() * 6, acc: 0, kind, k: -1, n: kind === 2 && !/mouth/.test(nm) ? node : null, sc: node.getLocalScale().clone() });
   }
   animate(set, dt, t, speed = 1) {
-    for (const s of set.spin) { const a = [0, 0, 0]; a[s.ax] = 130 * dt * speed; s.n.rotateLocal(a[0], a[1], a[2]); }
+    for (const s of set.spin) { const a = 130 * dt * speed; s.n.rotateLocal(s.ax === 0 ? a : 0, s.ax === 1 ? a : 0, s.ax === 2 ? a : 0); }
     for (const b of set.bob) { const p = b.n.getLocalPosition(); b.n.setLocalPosition(p.x, b.y + Math.sin(t * 1.6 + b.ph) * 0.18, p.z); b.n.rotateLocal(0, 28 * dt, 0); }
-    for (const s of set.sway) s.n.setLocalEulerAngles(s.r.x + Math.sin(t * 1.3 + s.ph) * 2.2, s.r.y, s.r.z + Math.cos(t * 1.1 + s.ph) * 2.6);
+    // the season's wind (the one that bends the smoke) decides how hard crowns, flags and reeds move
+    const sn = this.seasons, wind = (sn && sn.def ? sn.def.wind : 1) * (0.8 + 0.3 * Math.sin(t * 0.37) + 0.14 * Math.sin(t * 1.21 + 1.3)), wk = 0.55 + 0.75 * wind;
+    for (const s of set.sway) s.n.setLocalEulerAngles(s.r.x + Math.sin(t * 1.3 + s.ph) * 2.2 * wk, s.r.y, s.r.z + Math.cos(t * 1.1 + s.ph) * 2.6 * wk);
+    if (set.lean) for (const s of set.lean) {        // whole small plants: bent a little downwind, nodding in the gusts
+      const a = s.amp * (0.35 * wind + Math.sin(t * 1.7 + s.ph) * (0.3 + 0.5 * wind) + Math.sin(t * 3.1 + s.ph * 2.3) * 0.18 * wind) * 0.008727;
+      _q2.set(a * 0.38, 0, -a * 0.92, 1).normalize();
+      s.n.setLocalRotation(_q1.mul2(_q2, s.q));
+    }
+    if (set.drift && !(sn && sn.def && sn.def.water === 'ice')) for (const s of set.drift) {      // lily pads ride the ripples
+      const p = s.n.getLocalPosition(), a = t * 1.15 + s.ph;
+      s.n.setLocalPosition(p.x, s.y + Math.sin(a) * 0.014, p.z);
+      s.n.setLocalEulerAngles(Math.sin(a + 1.3) * 2.4, s.ry + Math.sin(t * 0.31 + s.ph) * 7, Math.cos(a * 0.83) * 2.4);
+    }
     for (const g of set.glow) {
       g.acc += dt;
       if (g.acc < (g.kind === 2 ? 0.07 : 0.11)) continue;            // a flame changes about 14 times a second, in steps
@@ -179,6 +195,74 @@ export class Engine {
       // (material numbers live in the material's uniform block in this engine version, so set the property)
       for (const x of g.mis) { x.m.emissiveIntensity = x.base * k; x.m.update(); }
     }
+  }
+  /** Models without parts of their own that should still live: reeds, ferns, grass, flowers and crops lean in the wind
+   *  as a whole (set.lean), lily pads drift on the water (set.drift). Call after the model is placed and turned. */
+  aliveOf(m, into) {
+    const nm = m.name || '';
+    if (nm === 'lilypad') (into.drift = into.drift || []).push({ n: m, y: m.getLocalPosition().y, ry: m.getLocalEulerAngles().y, ph: Math.random() * 6 });
+    else { const amp = LEAN[nm] || (nm.startsWith('crop_') ? 2.6 : 0); if (amp) (into.lean = into.lean || []).push({ n: m, q: m.getLocalRotation().clone(), amp, ph: Math.random() * 6 }); }
+  }
+  // ------------------------------------------------------------------------------------------
+  // walkers and rollers: leg_* (pivot at the hip), wheel_* and sway_tail nodes, driven by the distance travelled,
+  // so feet and wheels keep pace with the ground and stop when the model stops
+  // ------------------------------------------------------------------------------------------
+  gaitOf(root) {
+    const g = { root, legs: [], wheels: [], tail: null, tailR: null, x: 0, z: 0, yaw: 0, set: false, ph: 0, odo: 0, k: 0, v: 0, seed: Math.random() * 9 };
+    walk(root, (n) => {
+      const nm = n.name || '';
+      if (nm.startsWith('leg_')) g.legs.push({ n, off: GAIT[nm.slice(4, 6)] || 0, len: Math.max(0.3, n.getLocalPosition().y) });
+      else if (nm.startsWith('wheel_')) { const mi = n.render && n.render.meshInstances[0]; g.wheels.push({ n, rad: mi ? Math.max(0.2, mi.mesh.aabb.halfExtents.y) : 0.56, a: 0 }); }
+      else if (nm.startsWith('sway_tail')) { g.tail = n; g.tailR = n.getLocalEulerAngles().clone(); }
+    });
+    return g;
+  }
+  /** Put a walker at x,z heading `yaw` degrees (turns are eased) and move its legs, wheels, body and tail. */
+  gait(g, x, z, yaw, dt, t) {
+    let d = 0;
+    if (!g.set || dt <= 0) { g.set = true; g.yaw = yaw; }
+    else {
+      d = Math.hypot(x - g.x, z - g.z);
+      if (d > 3) { d = 0; g.yaw = yaw; }                                // a jump (time skipped): no moonwalk
+      else { const dy = ((yaw - g.yaw + 540) % 360) - 180; g.yaw += dy * Math.min(1, dt * 5); }
+    }
+    g.x = x; g.z = z;
+    if (dt > 0) g.v += (d / dt - g.v) * Math.min(1, dt * 6);
+    g.k += ((g.v > 0.06 ? 1 : 0) - g.k) * Math.min(1, dt * 7);
+    g.odo += d;
+    const k = g.k, TAU = Math.PI * 2;
+    let y = 0, pitch = 0, roll = 0;
+    if (g.legs.length) {
+      // a four-beat walk: diagonal pairs swing together, the hind foot of each pair a touch late. One cycle covers a
+      // stride, so the feet keep pace with the ground; a party that only creeps along still steps at a walking beat
+      // (a small slip reads better at phone size than slow motion), and nothing moves once it stands
+      const stride = clamp(g.v * 1.05, 1.2, 1.5);
+      g.ph = (g.ph + Math.max(d / stride, d > 0 ? 0.8 * dt : 0)) % 1;
+      for (const l of g.legs) {
+        const amp = Math.asin(Math.min(0.5, stride / (4 * l.len))) * 57.3, a = TAU * (g.ph + l.off);
+        l.n.setLocalEulerAngles(amp * k * (Math.sin(a) + 0.18 * Math.sin(2 * a + 0.6)), 0, 0);
+      }
+      y = k * 0.032 * (0.5 - 0.5 * Math.cos(2 * TAU * g.ph));
+      pitch = k * 1.7 * Math.sin(2 * TAU * g.ph + 0.7);                // the head nods twice a stride
+      roll = k * 1.4 * Math.sin(TAU * g.ph) + (1 - k) * 1.1 * Math.sin(t * 0.55 + g.seed);      // standing: shifts its weight
+    }
+    if (g.wheels.length) {
+      for (const w of g.wheels) { w.a = (w.a + d / w.rad * 57.2958) % 360; w.n.setLocalEulerAngles(w.a, 0, 0); }
+      // ruts and stones under the wheels, and the mule in the shafts stepping (its legs are part of the body)
+      const o = g.odo;
+      y += k * (0.022 * Math.abs(Math.sin(o * 2.9 + g.seed)) + 0.012 * Math.abs(Math.sin(o * 4.4)));
+      roll += k * 1.1 * Math.sin(o * 1.7 + g.seed);
+      pitch += k * (0.7 * Math.sin(o * 2.3) + 0.5 * Math.sin(o * 8.2)) + (1 - k) * 0.35 * Math.sin(t * 1.3 + g.seed);
+    }
+    if (g.tail) {
+      // walking: it swings with the stride; standing: a flick every few seconds
+      const u = (t * 0.27 + g.seed) % 1, flick = u < 0.16 ? Math.sin(u / 0.16 * Math.PI) * Math.sin(u * 90) * 24 : 0;
+      const r = g.tailR;
+      g.tail.setLocalEulerAngles(r.x - k * 9 + flick * 0.3, r.y, r.z + k * 13 * Math.sin(TAU * g.ph + 1) + (1 - k * 0.7) * (flick + 3 * Math.sin(t * 1.1 + g.seed)));
+    }
+    g.root.setLocalPosition(x, y, z);
+    _q1.setFromEulerAngles(0, g.yaw, 0); _q2.setFromEulerAngles(pitch, 0, roll);
+    g.root.setLocalRotation(_q1.mul(_q2));
   }
   flatMaterial(hex, opts = {}) {
     const key = hex + JSON.stringify(opts);
@@ -381,6 +465,9 @@ export class Engine {
   zoomBy(f) { const r = this.rig; r.dist = clamp(r.dist * f, r.minDist, r.maxDist); }
 }
 
+const _q1 = new pc.Quat(), _q2 = new pc.Quat();
+const LEAN = { reeds: 4.5, fern: 3, grass_tuft: 3.4, flowers_a: 3, flowers_b: 3, decor_scarecrow: 1.4 };      // degrees in a fair wind
+const GAIT = { fl: 0, br: 0.1, fr: 0.5, bl: 0.6 };                                                         // footfall order, in strides
 const hash1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
 /** Depth-first visit of an entity hierarchy. */
 export function walk(e, fn) {

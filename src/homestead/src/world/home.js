@@ -140,6 +140,7 @@ export class HomeWorld {
     const node = ent('litter');
     this.root.addChild(node);
     this._lit = node;
+    const anim = this._litAnim = { spin: [], bob: [], sway: [], glow: [] };      // ferns, grass and flowers lean in the wind
     const g = this.game, eng = this.engine, occ = g.occupancy();
     const seed = (g.s.seed % 613) + 3;
     const M = this.island.margin;
@@ -150,6 +151,7 @@ export class HomeWorld {
       m.setLocalPosition(this.tx(x + 0.5) + (r2 - 0.5) * 0.9, 0, this.tx(z + 0.5) + (hash01(x, z, seed + 5) - 0.5) * 0.9);
       m.setLocalEulerAngles(0, r2 * 360, 0);
       node.addChild(m);
+      this.engine.aliveOf(m, anim);
       return m;
     };
     for (let x = -M; x < GRID + M; x++) for (let z = -M; z < GRID + M; z++) {
@@ -235,7 +237,7 @@ export class HomeWorld {
   }
   _landSigns() {
     if (this._signs) for (const s of this._signs) s.destroy();
-    this._signs = [];
+    this._signs = []; this._signAnim = null;
     this._signPos = [];
     if (!this.game.landCost()) return;
     const h = this.game.half(), c = GRID / 2;
@@ -248,6 +250,7 @@ export class HomeWorld {
       m.setLocalPosition(wx, 0, wz);
       this.root.addChild(m);
       this._signs.push(m);
+      this._collectAnim(m, (this._signAnim = { spin: [], bob: [], sway: [], glow: [] }));
     }
   }
 
@@ -255,6 +258,7 @@ export class HomeWorld {
   // animated sub-parts of models
   // ------------------------------------------------------------------------------------------
   _collectAnim(root, into, fxList) {
+    this.engine.aliveOf(root, into);
     walk(root, (n) => {
       const nm = n.name || '';
       if (nm.startsWith('spinX_')) into.spin.push({ n, ax: 0 });
@@ -339,7 +343,7 @@ export class HomeWorld {
     if (key !== v.cropKey) {
       v.cropKey = key;
       for (const cr of v.crops) cr.destroy();
-      v.crops = [];
+      v.crops = []; v.anim.lean = null;
       if (b.crop) {
         const name = stage === 1 ? 'crop_sprout' : CROPS[b.crop].model;
         for (let i = 0; i < 4; i++) {
@@ -350,7 +354,9 @@ export class HomeWorld {
           m.setLocalEulerAngles(0, (i * 90 + 15) % 360, 0);
           v.model.addChild(m);
           v.crops.push(m);
+          this.engine.aliveOf(m, v.anim);
           if (stage === 3) this.fx.pop(m, 0.7, 0.4);
+          else if (stage === 1 && now - b.plantedAt < 3) this.fx.pop(m, 0.2, 0.45);      // just planted: the sprouts come up
         }
         if (stage === 3) { const c = this.center(b); this.fx.burst('sparkle', c.x, 0.9, c.z, 8, 1, { shape: 'fountain', radius: 0.9, angle: 10, delay: 0.3 }); }
       }
@@ -889,6 +895,8 @@ export class HomeWorld {
   update(dt, t) {
     const g = this.game, now = g.now();
     if (this._dressAnim) this._animate(this._dressAnim, dt, t);
+    if (this._litAnim) this._animate(this._litAnim, dt, t);
+    if (this._signAnim) this._animate(this._signAnim, dt, t);
     for (const v of this.bviews.values()) {
       const b = v.b, d = BUILDINGS[b.type];
       const busy = d.recipe ? b.queue > 0 : b.type === 'workshop' ? (b.jobs && b.jobs.length > 0) : true;

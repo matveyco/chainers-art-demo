@@ -1,5 +1,6 @@
-// Terrain of a location: one pixel-art ground canvas with dithered borders between ground kinds (the look
-// of the Chainers Farm yard) set in open land that runs to the horizon: the same forest floor carries on
+// Terrain of a location: one pixel-art ground canvas (the look of the Chainers Farm yard: a calm base, ground
+// kinds meeting along soft wobbling borders with a ragged pixel fringe, dark trodden strips and wheel ruts,
+// big fallen leaves; art/TEXTURE_DIRECTION.md) set in open land that runs to the horizon: the same forest floor carries on
 // far beyond the canvas, a low-detail forest stands on it, and distance haze closes the view. No edges.
 import { pc, ent } from './engine.js';
 import { TILE } from '../data/config.js';
@@ -10,7 +11,21 @@ const OUTER = 760;      // metres of forest floor around the canvas (the haze hi
 const FAR = ['tree_far_a', 'tree_far_b', 'tree_far_c', 'forest_clump_a', 'forest_clump_b'];
 const FAR_FALLBACK = ['tree_a', 'tree_b', 'tree_c', 'tree_pine'];
 const PPT = 32;         // ground pixels per tile (16 px per metre, like the reference ground)
-const BAND = 10;        // width in pixels of the dithered fringe between two ground kinds
+const FRINGE = 0.42;    // how far (in share of a tile's pull) the ragged pixel fringe reaches across a border: about 6 px
+const RUT_AT = 0.44, RUT_W = 0.021;      // the twin ruts of a trail: 7 px either side of its middle, 3 px wide
+const WORN_AT = 0.63;   // how much of the open earth is trodden dark (higher = less)
+const WORN = '#6e645e';                  // the dark packed earth under the ochre (reference: ruts and worn yard)
+// Big fallen leaves, painted into the ground at 16 px per metre. a = leaf, b = its lit half, c = stem.
+const LEAF_SHAPES = [
+  ['...a..a...', '.a.aa.aa.a', '.aaaaaaaaa', 'aaaabbaaa.', '.aabbbbaaa', 'aaabbbbba.', '.aaabbbaa.', '..a.abb...', '......c...'],
+  ['..a..a..', 'a.aa.aa.', 'aaaaaaaa', '.aabbaa.', 'aaabbbaa', '.aabbaa.', '.a.ab...', '....c...'],
+  ['.a..a..', 'aaa.aa.', 'aaabbaa', '.abbba.', 'aaabaa.', '.a.c...'],
+  ['.aa.', 'aaba', '.abc'],
+  ['aa', 'ab'],
+];
+// (stored as albedo: the warm sun turns these into the reference's oranges, see tools/process_textures4.py)
+const FALLEN = { amount: 1, colors: [['#af7529', '#c5913a'], ['#a06129', '#b67835'], ['#bfa136', '#d7b846'], ['#856349', '#9a724e']] };
+const LEAF_DENSITY = [0.1, 0.42, 0.07, 0.03, 0.03, 0, 0];      // per ground kind, in the order of KIND_TEX
 const KIND_TEX = { dirt: 'dirt', floor: 'floor', grass: 'grass', sand: 'sand', stone: 'rock', soil: 'soil', water: 'floor' };
 
 function texMat(engine, texName, opts = {}) {
@@ -122,7 +137,8 @@ export class Island {
 
   /**
    * (Re)paint the ground. typeAt(x,z) -> 'dirt' | 'floor' | 'grass' | 'sand' | 'stone' | 'soil' | 'water';
-   * shadeAt(x,z) -> [r,g,b] multiplier. Neighbouring kinds meet in a ragged pixel-dither fringe.
+   * shadeAt(x,z) -> [r,g,b] multiplier. Kinds are blended between tile centres, so a staircase of tiles
+   * comes out as a soft diagonal and a lone tile as a round patch; only water keeps to its tiles.
    */
   rebuild(typeAt, shadeAt, fade = false) {
     const eng = this.engine, G = this.grid, M = this.margin, T = G + 2 * M, N = this.size, seed = this.seed;
@@ -140,43 +156,134 @@ export class Island {
       const i = tz * T + tx;
       kinds[i] = Math.max(0, names.indexOf(k));
       const s = shadeAt ? shadeAt(tx - M, tz - M) : null;
-      const dk = k === 'water' ? 0.62 : 1;
-      shade[i * 3] = (s ? s[0] : 1) * dk; shade[i * 3 + 1] = (s ? s[1] : 1) * dk; shade[i * 3 + 2] = (s ? s[2] : 1) * dk;
+      shade[i * 3] = s ? s[0] : 1; shade[i * 3 + 1] = s ? s[1] : 1; shade[i * 3 + 2] = s ? s[2] : 1;
       if (k === 'water') water.push([tx - M, tz - M]);
     }
-    // broad light / dark drifts so large areas never look flat
-    const L = 3 * PPT, LN = Math.ceil(N / L) + 2;
-    const lat = new Float32Array(LN * LN);
-    for (let i = 0; i < lat.length; i++) lat[i] = hash2(i % LN, (i / LN) | 0, seed + 5);
+    // ---- smooth noise fields (value noise on coarse lattices, sampled per pixel) ----
+    const field = (cell, s, extent = N) => {
+      const n = Math.ceil(extent / cell) + 3, a = new Float32Array(n * n);
+      for (let i = 0; i < a.length; i++) a[i] = hash2(i % n, (i / n) | 0, seed + s);
+      return { a, n, cell };
+    };
+    const smp = (f, x, z) => {
+      const fx = x / f.cell, fz = z / f.cell, ix = fx | 0, iz = fz | 0, n = f.n, a = f.a, i = iz * n + ix;
+      let wx = fx - ix, wz = fz - iz;
+      wx = wx * wx * (3 - 2 * wx); wz = wz * wz * (3 - 2 * wz);
+      return a[i] + (a[i + 1] - a[i]) * wx + (a[i + n] - a[i]) * wz + (a[i] - a[i + 1] - a[i + n] + a[i + n + 1]) * wx * wz;
+    };
+    const drift = field(6 * PPT, 5);                               // broad light / dark drifts, 12 m across
+    const wxA = field(44, 11), wzA = field(44, 12), wxB = field(13, 13), wzB = field(13, 14);      // border wobble
+    const wornA = field(26, 15, N * 1.5), wornB = field(9, 16, N * 1.5), gate = field(40, 17);
+    // ---- per-tile helpers: water never joins the soft borders (its sheet is cut to the tiles), and a blurred
+    // ---- map of the trail tiles has a ridge along every trail: the ruts run a fixed step down from the crest
+    const WATER = names.indexOf('water'), SAND = names.indexOf('sand'), DIRT = names.indexOf('dirt'), FLOOR = names.indexOf('floor');
+    const land = new Uint8Array(T * T), sandF = new Float32Array(T * T);
+    for (let i = 0; i < land.length; i++) land[i] = kinds[i] === WATER ? FLOOR : kinds[i];
+    const isSand = (x, z) => (x >= 0 && z >= 0 && x < T && z < T && kinds[z * T + x] === SAND ? 1 : 0);
+    for (let tz = 0; tz < T; tz++) for (let tx = 0; tx < T; tx++) {
+      let s = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += isSand(tx + i, tz + j) * (2 - Math.abs(i)) * (2 - Math.abs(j));
+      sandF[tz * T + tx] = s / 16;
+    }
+    let shaded = false;
+    for (let i = 0; i < shade.length; i++) if (shade[i] !== 1) { shaded = true; break; }
+    // the dark packed earth that shows where the ground is worn (ruts, trodden patches): it keeps the grain of
+    // the texture it replaces
+    const wornHex = season ? season.worn : WORN, worn = wornHex ? new pc.Color().fromString(wornHex) : null;
+    const mean = src.map((sp) => { let m = 0; for (let i = 0; i < sp.length; i += 4) m += sp[i] * 0.3 + sp[i + 1] * 0.59 + sp[i + 2] * 0.11; return m / (sp.length / 4); });
     const img = this.ctx.createImageData(N, N), out = img.data;
-    const half = PPT / 2;
+    const kmap = new Uint8Array(N * N), acc = new Float32Array(names.length);
+    const lim = N - 1, tl = T - 1;
     for (let gz = 0; gz < N; gz++) {
-      const tz = (gz / PPT) | 0, lz = gz % PPT;
-      const dz = lz < half ? lz : PPT - 1 - lz, nz = lz < half ? tz - 1 : tz + 1;
-      const fz = gz / L, iz = fz | 0, wz = fz - iz;
+      const tz0 = (gz / PPT) | 0;
       for (let gx = 0; gx < N; gx++) {
-        const tx = (gx / PPT) | 0, lx = gx % PPT;
-        let ti = tz * T + tx;
-        const k0 = kinds[ti];
-        const dx = lx < half ? lx : PPT - 1 - lx, nx = lx < half ? tx - 1 : tx + 1;
-        let cand = -1, d = BAND;
-        if (dx < d && nx >= 0 && nx < T && kinds[tz * T + nx] !== k0) { cand = tz * T + nx; d = dx; }
-        if (dz < d && nz >= 0 && nz < T && kinds[nz * T + tx] !== k0) { cand = nz * T + tx; d = dz; }
-        if (cand < 0 && dx < BAND && dz < BAND && nx >= 0 && nx < T && nz >= 0 && nz < T && kinds[nz * T + nx] !== k0) { cand = nz * T + nx; d = Math.max(dx, dz); }
-        if (cand >= 0) {
-          // chunky 2px dither whose density falls off away from the border
-          const p = 0.5 * Math.pow(1 - d / BAND, 1.25);
-          if (hash2(gx >> 1, gz >> 1, seed) < p) ti = cand;
+        const own = tz0 * T + ((gx / PPT) | 0), o = (gz * N + gx) * 4;
+        const rim = Math.min(1, Math.min(gx, gz, lim - gx, lim - gz) / (2.5 * PPT));
+        let k, sr = 1, sg = 1, sb = 1, rut = false;
+        if (kinds[own] === WATER) {
+          k = WATER; sr = shade[own * 3] * 0.62; sg = shade[own * 3 + 1] * 0.62; sb = shade[own * 3 + 2] * 0.62;
+        } else {
+          // where am I between the four nearest tile centres, after the wobble
+          let px = gx + ((smp(wxA, gx, gz) - 0.5) * 22 + (smp(wxB, gx, gz) - 0.5) * 7) * rim;
+          let pz = gz + ((smp(wzA, gx, gz) - 0.5) * 22 + (smp(wzB, gx, gz) - 0.5) * 7) * rim;
+          px = px < 0 ? 0 : px > lim ? lim : px; pz = pz < 0 ? 0 : pz > lim ? lim : pz;
+          const u = px / PPT - 0.5, v = pz / PPT - 0.5, fi = Math.floor(u), fj = Math.floor(v), fu = u - fi, fv = v - fj;
+          const i0 = fi < 0 ? 0 : fi, i1 = fi + 1 > tl ? tl : fi + 1, j0 = fj < 0 ? 0 : fj, j1 = fj + 1 > tl ? tl : fj + 1;
+          const t00 = j0 * T + i0, t10 = j0 * T + i1, t01 = j1 * T + i0, t11 = j1 * T + i1;
+          const w00 = (1 - fu) * (1 - fv), w10 = fu * (1 - fv), w01 = (1 - fu) * fv, w11 = fu * fv;
+          const k00 = land[t00], k10 = land[t10], k01 = land[t01], k11 = land[t11];
+          k = k00;
+          if (k10 !== k00 || k01 !== k00 || k11 !== k00) {
+            // the kind with the most weight wins; close to a border the runner-up breaks in, in 2 px chunks
+            acc[k00] += w00; acc[k10] += w10; acc[k01] += w01; acc[k11] += w11;
+            let best = -1, second = -1;
+            for (let q = 0; q < 4; q++) {
+              const kk = q === 0 ? k00 : q === 1 ? k10 : q === 2 ? k01 : k11;
+              if (kk === best || kk === second) continue;
+              if (best < 0 || acc[kk] > acc[best]) { second = best; best = kk; } else if (second < 0 || acc[kk] > acc[second]) second = kk;
+            }
+            k = best;
+            const m = acc[best] - acc[second];
+            if (m < FRINGE) { const p = 0.5 * Math.pow(1 - m / FRINGE, 1.6); if (hash2(gx >> 1, gz >> 1, seed) < p) k = second; }
+            acc[k00] = 0; acc[k10] = 0; acc[k01] = 0; acc[k11] = 0;
+          }
+          if (shaded) {
+            const a = t00 * 3, b = t10 * 3, c = t01 * 3, d = t11 * 3;
+            sr = shade[a] * w00 + shade[b] * w10 + shade[c] * w01 + shade[d] * w11;
+            sg = shade[a + 1] * w00 + shade[b + 1] * w10 + shade[c + 1] * w01 + shade[d + 1] * w11;
+            sb = shade[a + 2] * w00 + shade[b + 2] * w10 + shade[c + 2] * w01 + shade[d + 2] * w11;
+          }
+          if (worn) {
+            const cx = gx & ~1, cz = gz & ~1;
+            if (k === SAND) {
+              // twin ruts on a trail: ragged strips, with gaps
+              const f = sandF[t00] * w00 + sandF[t10] * w10 + sandF[t01] * w01 + sandF[t11] * w11;
+              rut = Math.abs(f - RUT_AT) < RUT_W && hash2(cx, cz, seed + 9) > 0.2 && smp(gate, gx, gz) > 0.4;
+            } else if (k === DIRT) {
+              // trodden strips across the yard, all leaning the same way like tracks
+              const a = cx * 0.8 + cz * 0.6, b = cz * 0.8 - cx * 0.6 + N * 0.6;
+              const n = smp(wornA, a / 3, b) + (smp(wornB, a / 2, b) - 0.5) * 0.22 + (hash2(cx, cz, seed + 8) - 0.5) * 0.07;
+              rut = n * rim > WORN_AT;
+            }
+          }
         }
-        const sp = src[kinds[ti]];
-        const si = ((gz & 63) * 64 + (gx & 63)) * 4;
-        const fx = gx / L, ix = fx | 0, wx = fx - ix;
-        const a = lat[iz * LN + ix], b = lat[iz * LN + ix + 1], c = lat[(iz + 1) * LN + ix], e = lat[(iz + 1) * LN + ix + 1];
-        // drifts fade out toward the rim so the canvas meets the plain forest floor around it without a seam
-        const rim = Math.min(1, Math.min(gx, gz, N - 1 - gx, N - 1 - gz) / (2.5 * PPT));
-        const v = 1 + (0.2 * (a + (b - a) * wx + (c - a) * wz + (a - b - c + e) * wx * wz) - 0.1) * rim;
-        const o = (gz * N + gx) * 4, s3 = ti * 3;
-        out[o] = sp[si] * shade[s3] * v; out[o + 1] = sp[si + 1] * shade[s3 + 1] * v; out[o + 2] = sp[si + 2] * shade[s3 + 2] * v; out[o + 3] = 255;
+        kmap[gz * N + gx] = k;
+        const sp = src[k], si = ((gz & 63) * 64 + (gx & 63)) * 4;
+        const lv = 1 + (0.14 * smp(drift, gx, gz) - 0.07) * rim;
+        if (rut) {
+          const g = (sp[si] * 0.3 + sp[si + 1] * 0.59 + sp[si + 2] * 0.11) / mean[k] * 255 * lv;
+          out[o] = worn.r * g * sr; out[o + 1] = worn.g * g * sg; out[o + 2] = worn.b * g * sb;
+        } else {
+          out[o] = sp[si] * sr * lv; out[o + 1] = sp[si + 1] * sg * lv; out[o + 2] = sp[si + 2] * sb * lv;
+        }
+        out[o + 3] = 255;
+      }
+    }
+    // ---- big fallen leaves (petals, straw): drawn sprites, thick on the forest floor, thin on open ground ----
+    const fallen = season ? season.fallen : FALLEN;
+    if (fallen && fallen.colors.length) {
+      const cols = fallen.colors.map((pair) => pair.map((h) => { const c = new pc.Color().fromString(h); return [c.r * 255, c.g * 255, c.b * 255]; }));
+      const shapes = fallen.big === false ? LEAF_SHAPES.slice(2) : LEAF_SHAPES, cell = 11, cn = Math.floor(N / cell);
+      for (let cz = 0; cz < cn; cz++) for (let cx = 0; cx < cn; cx++) {
+        const x = cx * cell + ((hash2(cx, cz, seed + 22) * cell) | 0), z = cz * cell + ((hash2(cx, cz, seed + 23) * cell) | 0);
+        const kk = kmap[z * N + x], rim = Math.min(1, Math.min(x, z, lim - x, lim - z) / (3 * PPT));
+        if (hash2(cx, cz, seed + 21) >= LEAF_DENSITY[kk] * fallen.amount * rim) continue;
+        const pick = hash2(cx, cz, seed + 24), sh = shapes[(pick * pick * shapes.length) | 0], turn = (hash2(cx, cz, seed + 25) * 8) | 0;
+        const col = cols[(hash2(cx, cz, seed + 26) * cols.length) | 0], h = sh.length, w = sh[0].length;
+        for (let pass = 0; pass < 2; pass++) for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+          const ch = sh[j][i];
+          if (ch === '.') continue;
+          // eight ways to lay the same leaf: mirror and quarter turns
+          let dx = turn & 1 ? w - 1 - i : i, dz = turn & 2 ? h - 1 - j : j;
+          if (turn & 4) { const t = dx; dx = dz; dz = t; }
+          const qx = x + dx + (pass ? 0 : 1), qz = z + dz + (pass ? 0 : 1);
+          if (qx < 0 || qz < 0 || qx > lim || qz > lim) continue;
+          const q = qz * N + qx, qk = kmap[q];
+          if (qk === WATER || LEAF_DENSITY[qk] === 0) continue;
+          if (!pass) { out[q * 4] *= 0.8; out[q * 4 + 1] *= 0.8; out[q * 4 + 2] *= 0.82; continue; }      // its shadow, down-right
+          const c = ch === 'b' ? col[1] : col[0], dk = ch === 'c' ? 0.62 : 1;
+          out[q * 4] = c[0] * dk; out[q * 4 + 1] = c[1] * dk; out[q * 4 + 2] = c[2] * dk;
+        }
       }
     }
     this.ctx.putImageData(img, 0, 0);

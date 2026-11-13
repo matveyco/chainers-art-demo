@@ -84,6 +84,7 @@ export class FrontierWorld {
     for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) if (this.kindAt(x, z) === 'water') { const p = this.w(x + 0.5, z + 0.5); this._water.push(p.x, p.z); }
   }
   _collect(root, into) {
+    this.engine.aliveOf(root, into);
     walk(root, (n) => {
       const nm = n.name || '';
       if (nm.startsWith('sway_')) into.sway.push({ n, ph: Math.random() * 6, r: n.getLocalEulerAngles().clone() });
@@ -105,7 +106,7 @@ export class FrontierWorld {
     for (let x = -2; x < S + 2; x++) for (let z = -2; z < S + 2; z++) {
       const roll = r(), jx = r(), jz = r(), rot = r(), sc = r();
       const k0 = this.kindAt(x, z);
-      if (k0 === 'water') { if (roll < 0.3 && eng.hasModel('lilypad')) { const p = this.w(x + 0.5, z + 0.5), m = eng.model('lilypad'); m.setLocalPosition(p.x, 0.04, p.z); node.addChild(m); } continue; }
+      if (k0 === 'water') { if (roll < 0.3 && eng.hasModel('lilypad')) { const p = this.w(x + 0.5, z + 0.5), m = eng.model('lilypad'); m.setLocalPosition(p.x, 0.04, p.z); node.addChild(m); this._collect(m, this.anim); } continue; }
       if (this.trail.has(x + ',' + z)) continue;
       // pond banks: reeds instead of the zone's scatter, so no tree ends up standing in the water
       if (POND_TILES.has((x + 1) + ',' + z) || POND_TILES.has((x - 1) + ',' + z) || POND_TILES.has(x + ',' + (z + 1)) || POND_TILES.has(x + ',' + (z - 1))) {
@@ -202,6 +203,7 @@ export class FrontierWorld {
       if (eng.hasModel('poi_flag')) { const flag = eng.model('poi_flag'); flag.setLocalPosition(2.3, 0, 1.7); node.addChild(flag); }
       const pv = { poi, node, anim: { spin: [], bob: [], sway: [], glow: [] } };
       this._collect(node, pv.anim);
+      eng.aliveOf(prop, pv.anim);
       this.pois.set(poi.id, pv);
       if (this.active) this.fx.pop(node, 0.3, 0.5);
     }
@@ -213,11 +215,11 @@ export class FrontierWorld {
   _syncParties() {
     const g = this.game, eng = this.engine;
     const keep = new Set(g.s.expeditions.map((e) => e.id));
-    for (const [id, pv] of this.parties) if (!keep.has(id)) { for (const a of pv.avatars) a.av.destroy(); if (pv.cart) pv.cart.destroy(); if (pv.camp) pv.camp.destroy(); this.parties.delete(id); }
+    for (const [id, pv] of this.parties) if (!keep.has(id)) { for (const a of pv.avatars) a.av.destroy(); for (const f of (pv.anim.fx || [])) f.stop(); if (pv.cart) pv.cart.destroy(); if (pv.camp) pv.camp.destroy(); this.parties.delete(id); }
     if (!eng.containers.has('chainer')) return;
     for (const e of g.s.expeditions) {
       if (this.parties.has(e.id)) continue;
-      const pv = { e, avatars: [], cart: null, camp: null, x: 0, z: 0 };
+      const pv = { e, avatars: [], cart: null, camp: null, gait: null, x: 0, z: 0, anim: { spin: [], bob: [], sway: [], glow: [] } };
       for (const id of e.team) {
         const c = g.chainer(id);
         if (!c) continue;
@@ -226,8 +228,8 @@ export class FrontierWorld {
         pv.avatars.push({ av, c, yaw: 0 });
       }
       const V = TRANSPORT[e.transport];
-      if (V && V.model && eng.hasModel(V.model)) { pv.cart = eng.model(V.model, { batch: false }); this.root.addChild(pv.cart); }
-      if (eng.hasModel('party_camp')) { pv.camp = eng.model('party_camp', { batch: false }); pv.camp.enabled = false; this.root.addChild(pv.camp); }
+      if (V && V.model && eng.hasModel(V.model)) { pv.cart = eng.model(V.model, { batch: false }); this.root.addChild(pv.cart); this._collect(pv.cart, pv.anim); pv.gait = eng.gaitOf(pv.cart); }
+      if (eng.hasModel('party_camp')) { pv.camp = eng.model('party_camp', { batch: false }); pv.camp.enabled = false; this.root.addChild(pv.camp); this._collect(pv.camp, pv.anim); for (const f of (pv.anim.fx || [])) f.on = false; }
       this.parties.set(e.id, pv);
       this._placeParty(pv, 0, 0);
     }
@@ -271,8 +273,16 @@ export class FrontierWorld {
       const back = n * 1.25 + 1.4;
       const x = walking ? wp.x - hx * back : ph.phase === 'work' ? site.x - 3.2 : this.gatePos.x + 2.6;
       const z = walking ? wp.z - hz * back : ph.phase === 'work' ? site.z + 2.2 : this.gatePos.z - 2.2;
-      pv.cart.setLocalPosition(x, 0, z);
-      pv.cart.setLocalEulerAngles(0, walking ? Math.atan2(hx, hz) * 180 / Math.PI : 150, 0);
+      // it walks to where it waits (beside the place, by the gate) instead of jumping there, and turns the way it goes
+      const G = pv.gait, c = pv.cart.getLocalPosition();
+      let cx = x, cz = z, yaw = walking ? Math.atan2(hx, hz) * 180 / Math.PI : 150;
+      const ox = x - c.x, oz = z - c.z, off = Math.hypot(ox, oz);
+      if (dt > 0 && G.set && off < 14) {
+        const step = Math.max(2.4 * dt, Math.hypot(x - pv.tx, z - pv.tz) * 1.5);      // never slower than the party itself
+        if (off > step) { cx = c.x + ox / off * step; cz = c.z + oz / off * step; if (!walking) yaw = Math.atan2(ox, oz) * 180 / Math.PI; }
+      }
+      pv.tx = x; pv.tz = z;
+      this.engine.gait(G, cx, cz, yaw, dt, t);
     }
     // the place is alive while they work: chips fly at a grove, pebbles at a quarry, dust in a fight
     if (ph.phase === 'work' && dt > 0 && this.active) {
@@ -288,7 +298,7 @@ export class FrontierWorld {
     }
     if (pv.camp) {
       const on = ph.phase === 'work';
-      if (pv.camp.enabled !== on) pv.camp.enabled = on;
+      if (pv.camp.enabled !== on) { pv.camp.enabled = on; for (const f of (pv.anim.fx || [])) f.on = on; }
       if (on) pv.camp.setLocalPosition(site.x + 2.6, 0, site.z + 2.4);
     }
   }
@@ -377,7 +387,7 @@ export class FrontierWorld {
     if (!this.active) return;
     this.engine.animate(this.anim, dt, t);
     for (const pv of this.pois.values()) this.engine.animate(pv.anim, dt, t);
-    for (const pv of this.parties.values()) this._placeParty(pv, dt, t);
+    for (const pv of this.parties.values()) { this.engine.animate(pv.anim, dt, t); this._placeParty(pv, dt, t); }
     // glints on open water near the camera (a few a second; ice only winks now and then)
     const W = this._water, nW = W.length >> 1;
     if (nW) {
