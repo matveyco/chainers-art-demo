@@ -1,5 +1,5 @@
 // DOM UI core: HUD, world-anchored markers, toasts, loot flyers, modal host. Panels live in panels.js.
-import { RES, HUD_RES, CRATES, RARITY, STATS, STAT_KEYS, xpForLevel, QUESTS, BUILDINGS, REGIONS, POI_TYPES, LUCKY } from '../data/config.js';
+import { RES, HUD_RES, CRATES, RARITY, STATS, STAT_KEYS, xpForLevel, QUESTS, BUILDINGS, REGIONS, POI_TYPES, LUCKY , UPGRADE_ORDER} from '../data/config.js';
 import { fmt, fmtEth, fmtTime, fmtClock, clamp, lerp } from '../core/util.js';
 import { iconUrl } from '../core/assets.js';
 import { SEASONS, SEASON_ORDER } from '../data/seasons.js';
@@ -173,10 +173,11 @@ export class UI {
     const seasonBtn = sb(`data-act="seasonMenu" aria-haspopup="true" aria-expanded="${!!this.seasonOpen}"`, sn.icon, sn.name, 0, this.seasonOpen ? 'open' : '', `Season: ${sn.name}`);
     // the Reward Pool and the Exchange belong to the whole world: you reach them through your own building
     const hasPool = !!g.first('pool_shrine'), hasEx = !!g.first('exchange');
+    const autoReady = UPGRADE_ORDER.filter((k) => !g.hasUpg(k) && g.checkUpgradeBuy(k).ok).length;      // a badge when one can be unlocked now
     const left = home
       ? sb('data-act="open" data-panel="roster"', 'ui_chainers', 'Chainers', hungryGuests)
         + sb('data-act="open" data-panel="level"', 'ui_goals', 'Quests', pr && pr.done ? '!' : 0)
-        + sb('data-act="open" data-panel="supply"', 'ui_supply', 'Supply', 0, '', 'Supply lines', 'ui_storage')
+        + sb('data-act="open" data-panel="supply"', 'ui_supply', 'Auto', autoReady, '', 'Automation: upgrades that run your buildings for you', 'ui_storage')
         + sb('data-act="open" data-panel="pool"', 'ui_pool', 'Pool', hasPool ? crates : 0, hasPool ? '' : 'locked', hasPool ? 'World Reward Pool' : 'World Reward Pool. Locked: build a Pool Shrine')
         + sb('data-act="open" data-panel="exchange"', 'ui_exchange', 'Trade', 0, hasEx ? '' : 'locked', hasEx ? 'World Exchange' : 'World Exchange. Locked: build a Trading Post')
       : sb('data-act="goHome"', 'item_house', 'Home', 0, '', 'Back to the Homestead', 'ui_storage');
@@ -747,7 +748,7 @@ export class UI {
       { sel: '#hud-right .tool.fr', title: 'Frontier', text: 'Loot and resources come from here. Build the Expedition Lodge, send a squad and claim the loot when they are back.' },
       { sel: '.snav [data-act="sound"]', title: 'Sound', text: 'Tap to mute. Tap again to turn the sound on.' },
       { sel: '.snav [data-panel="roster"]', title: 'Your Chainers', text: 'All your Chainers and Wanderers. You can also tap a Chainer in the yard to give orders.' },
-      { sel: '.snav [data-panel="supply"]', title: 'Supply lines', text: 'Upgrades that automate your Homestead: feeding Wanderers, replanting, harvesting, crafting.' },
+      { sel: '.snav [data-panel="supply"]', title: 'Automation', text: 'Upgrades for your buildings that do the tapping for you: plant, harvest, feed, craft and upload. A badge shows when one can be unlocked.' },
       { sel: '.snav [data-panel="level"]', title: 'Quests and level', text: 'Your Homestead level, how to earn XP, what each level unlocks and what to do next.' },
     ]);
   }

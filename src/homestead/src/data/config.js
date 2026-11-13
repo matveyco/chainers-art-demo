@@ -395,40 +395,45 @@ export const LUCKY = {
 };
 
 // ----------------------------------------------------------------------------------------------
-// Supply lines: upgrades that make the homestead run itself. Bought once with resources.
+// Automation: upgrades for a building that do the tapping for you. Bought once with resources.
 // `level` = Homestead level needed; `needs` = a building you must have.
 // ----------------------------------------------------------------------------------------------
 export const UPGRADES = {
-  kitchen:   { name: 'Camp Kitchen',    icon: 'upg_kitchen',    alt: 'item_food_bowl', level: 2, needs: 'camp',        cost: { wood: 60, stone: 40, bio: 40 },
-    desc: 'Feeds Wanderers automatically when they arrive. You set how much food it keeps.' },
-  seeddrill: { name: 'Seed Drill',      icon: 'upg_seed_drill', alt: 'crop_sprout',    level: 2, needs: 'farm_plot',   cost: { wood: 80, stone: 30 },
-    desc: 'Farm Plots replant the same crop after each harvest.' },
-  baskets:   { name: 'Harvest Baskets', icon: 'upg_baskets',    alt: 'item_basket',    level: 3, needs: 'farm_plot',   cost: { wood: 120, planks: 10 },
-    desc: 'Ready crops are harvested automatically, even while you are away.' },
-  bell:      { name: 'Foreman\'s Bell', icon: 'upg_bell',       alt: 'item_hammer',    level: 4, needs: null,          cost: { planks: 30, bricks: 30 },
-    desc: 'Sawmill, Stonecutter and Smelter craft automatically and store what they make. You set how many resources to keep.' },
-  crateline: { name: 'Crate Line',      icon: 'upg_crate_line', alt: 'item_crate_1',   level: 5, needs: 'workshop',    cost: { planks: 50, bricks: 50, ingot: 6 },
-    desc: 'The Workshop keeps crafting the Crate you pick while you have resources, and collects them for you.' },
-  courier:   { name: 'Courier',         icon: 'upg_courier',    alt: 'item_eth',       level: 6, needs: 'pool_shrine', cost: { planks: 40, ingot: 10 },
-    desc: 'Finished Crates are uploaded to the Reward Pool automatically.' },
+  // `at`: the building(s) it upgrades (you need at least one of them). `line`: which chain it automates.
+  seeddrill: { name: 'Auto-plant',   icon: 'upg_seed_drill', alt: 'crop_sprout',    level: 2, at: ['farm_plot'], line: 'food', cost: { wood: 80, stone: 30 },
+    does: 'Farm Plots replant the same crop after every harvest.', desc: 'Farm Plots replant the same crop after every harvest.' },
+  baskets:   { name: 'Auto-harvest', icon: 'upg_baskets',    alt: 'item_basket',    level: 3, at: ['farm_plot'], line: 'food', cost: { wood: 120, planks: 10 },
+    does: 'Ready crops are harvested for you, also while you are away.', desc: 'Ready crops are harvested for you, also while you are away.' },
+  kitchen:   { name: 'Auto-feed',    icon: 'upg_kitchen',    alt: 'item_food_bowl', level: 2, at: ['camp'], line: 'food', cost: { wood: 60, stone: 40 },
+    does: 'New Wanderers are fed the moment they arrive, so they never leave hungry.', desc: 'New Wanderers are fed the moment they arrive, so they never leave hungry.' },
+  bell:      { name: 'Auto-craft',   icon: 'upg_bell',       alt: 'item_hammer',    level: 4, at: ['sawmill', 'stonecutter', 'smelter'], line: 'crates', cost: { planks: 30, bricks: 30 },
+    does: 'Sawmill, Stonecutter and Smelter keep working by themselves and store what they make.', desc: 'Sawmill, Stonecutter and Smelter keep working by themselves and store what they make.' },
+  crateline: { name: 'Auto-Crates',  icon: 'upg_crate_line', alt: 'item_crate_1',   level: 5, at: ['workshop'], line: 'crates', cost: { planks: 40, bricks: 40 },
+    does: 'The Crate Workshop keeps crafting the Crate you pick and collects it.', desc: 'The Crate Workshop keeps crafting the Crate you pick and collects it.' },
+  courier:   { name: 'Auto-upload',  icon: 'upg_courier',    alt: 'item_eth',       level: 6, at: ['pool_shrine'], line: 'crates', cost: { planks: 40, ingot: 6 },
+    does: 'Finished Crates go to the Reward Pool by themselves.', desc: 'Finished Crates go to the Reward Pool by themselves.' },
 };
-export const UPGRADE_ORDER = ['kitchen', 'seeddrill', 'baskets', 'bell', 'crateline', 'courier'];
+export const AUTO_LINES = [
+  { id: 'food', name: 'Food line', icon: 'res_bio', text: 'Farms plant, harvest and feed your Wanderers without a tap.', steps: [['farm_plot', 'Farm'], ['res_bio', 'Biopoints'], ['camp_1', 'Wanderers']] },
+  { id: 'crates', name: 'Crate line', icon: 'item_crate_1', text: 'Wood and Stone become goods, Crates and ETH without a tap. You still bring the Wood and Stone.', steps: [['res_wood', 'Wood, Stone'], ['sawmill', 'Goods'], ['item_crate_1', 'Crates'], ['item_eth', 'ETH']] },
+];
+export const UPGRADE_ORDER = ['seeddrill', 'baskets', 'kitchen', 'bell', 'crateline', 'courier'];
 export const AUTO_DEFAULT = {
   kitchen: { on: true, stock: 80, floor: 40 },
   seeddrill: { on: true }, baskets: { on: true },
-  bell: { on: true, keep: { wood: 60, stone: 60, ore: 10 } },
-  crateline: { on: false, key: 'crate1', keepBio: 80, keep: { wood: 60, stone: 60 } },
+  bell: { on: true, upTo: 40, keep: { wood: 100, stone: 100, ore: 10 } },      // upTo: stop crafting a good once you hold this many
+  crateline: { on: false, key: 'crate1', keepBio: 80, keep: { wood: 100, stone: 100 } },
   courier: { on: true },
 };
 export const LARDER_CAP = [120, 200, 320, 480];      // by Wanderer Camp level
 
 // What a Homestead level opens (shown on the level card). Your level also gates Home upgrades: Home level n needs level (n-1)*2.
 export const LEVEL_PERKS = {
-  2: ['Home level 2', 'Camp Kitchen', 'Seed Drill'],
-  3: ['Harvest Baskets'],
-  4: ['Home level 3', 'Foreman\'s Bell'],
-  5: ['Crate Line'],
-  6: ['Home level 4', 'Courier'],
+  2: ['Home level 2', 'Auto-plant', 'Auto-feed'],
+  3: ['Auto-harvest'],
+  4: ['Home level 3', 'Auto-craft'],
+  5: ['Auto-Crates'],
+  6: ['Home level 4', 'Auto-upload'],
   8: ['Home level 5'],
 };
 export const XP_SOURCES = [['item_hammer', 'Build and upgrade'], ['res_bio', 'Harvest crops'], ['item_compass', 'Expeditions'], ['item_crate_1', 'Crates and the pool'], ['item_trophy', 'Quests'], ['item_axe', 'Clear land']];
@@ -462,7 +467,7 @@ export const QUESTS = [
   { id: 'q_cosy',    text: 'Reach 20 Cosiness with decor', goal: { cosy: 20 }, reward: { bio: 80, wood: 40 }, hint: 'build:decor_flowerbed' },
   { id: 'q_saw',     text: 'Build a Sawmill and a Stonecutter', goal: { buildAll: ['sawmill', 'stonecutter'] }, reward: { wood: 80, stone: 80 }, hint: 'build:sawmill' },
   { id: 'q_home2',   text: 'Upgrade the Chainer Home to level 2', goal: { level: ['home', 2] }, reward: { planks: 10, bricks: 10 }, hint: 'home' },
-  { id: 'q_supply',  text: 'Unlock the Camp Kitchen to auto-feed Wanderers', goal: { upg: 'kitchen' }, reward: { bio: 120 }, hint: 'supply' },
+  { id: 'q_supply',  text: 'Unlock Auto-feed in Automation', goal: { upg: 'kitchen' }, reward: { bio: 120 }, hint: 'supply' },
   { id: 'q_xchg',    text: 'Build the Trading Post and swap resources', goal: { swaps: 1 }, reward: { ore: 20, bio: 80 }, hint: 'build:exchange' },
   { id: 'q_eth',     text: 'Earn your first ETH from the Reward Pool', goal: { ethEarned: 0.0000001 }, reward: { planks: 15, bricks: 15 }, hint: 'pool' },
   { id: 'q_recruit', text: 'Recruit a Wanderer with ETH', goal: { recruited: 1 }, reward: { bio: 200, planks: 20, bricks: 20 }, hint: 'camp' },

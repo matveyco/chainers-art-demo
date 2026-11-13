@@ -1,5 +1,6 @@
 // All panels and UI actions.
 import {
+  AUTO_LINES,
   BUILD_GROUPS, BUILD_USE, BUILD_NEXT,
   RES, RES_ORDER, CRATES, STATS, STAT_KEYS, ACTIVITIES, RARITY, RARITY_ORDER, TRAITS, WISHES, COSY_TIERS, BUILDINGS, BUILD_CATS,
   CROPS, GUEST, REGIONS, POI_TYPES, CONDITIONS, POOL, POOL_ETH_PER_EPOCH, EXCHANGE, QUESTS, CLEARABLES, LAND, GRUDGE,
@@ -91,12 +92,20 @@ export const PANELS = {
         if (!rows) return '';
         return `<section id="bg-${G.id}"><h3>${ic(G.icon, 22, '', 'item_star')}<b>${G.name}</b><span>${G.why}</span></h3>${rows}</section>`;
       }).join('');
+      const autoRows = st.can ? '' : UPGRADE_ORDER.map((k) => {
+        const U = UPGRADES[k], own = g.hasUpg(k), chk = own ? null : g.checkUpgradeBuy(k);
+        return `<button class="brow ${own ? 'done' : chk.ok ? 'go' : 'lock'}" data-act="open" data-panel="supply">
+          <span class="pic">${ic(U.icon, 60, '', U.alt)}</span>
+          <span class="tx"><span class="nm"><b>${U.name}</b></span><small>${U.does}</small><small>${ic(BUILDINGS[U.at[0]].icon, 14)}Upgrade for the ${BUILDINGS[U.at[0]].name}</small></span>
+          <span class="bst">${own ? `<em class="done">${g.autoOn(k) ? 'On' : 'Off'}</em>` : chk.ok ? '<em class="go">Unlock</em>' : `<em class="lock">${ic('item_lock', 16)}${chk.level ? 'Level ' + chk.level : chk.needs ? 'Needs ' + BUILDINGS[chk.needs].name : 'Not enough yet'}</em>`}</span></button>`;
+      }).join('');
+      const autoGroup = autoRows ? `<section id="bg-auto"><h3>${ic('ui_supply', 22, '', 'item_star')}<b>Automation</b><span>Upgrades, not buildings: they make your buildings work by themselves</span></h3>${autoRows}</section>` : '';
       const jump = `<div class="jump" role="group" aria-label="Jump to">
         <button class="jchip ${st.can ? 'on' : ''}" data-act="buildCan" aria-pressed="${!!st.can}">Can build now</button>
-        ${BUILD_GROUPS.map(G => `<button class="jchip" data-act="buildJump" data-id="${G.id}">${G.name}</button>`).join('')}</div>`;
+        ${BUILD_GROUPS.map(G => `<button class="jchip" data-act="buildJump" data-id="${G.id}">${G.name}</button>`).join('')}<button class="jchip" data-act="buildJump" data-id="auto">Automation</button></div>`;
       return `${head('ui_build', 'Build', `All buildings in one list · free builders ${g.builderSlots() - g.activeBuilds()} / ${g.builderSlots()}`, 'item_hammer')}
         ${jump}
-        <div class="body blist">${top}${groups || '<p class="muted">Nothing you can build right now. Get more Wood and Stone, or upgrade the Chainer Home.</p>'}
+        <div class="body blist">${top}${(groups + autoGroup) || '<p class="muted">Nothing you can build right now. Get more Wood and Stone, or upgrade the Chainer Home.</p>'}
         <p class="muted" style="margin-top:12px">To upgrade, tap a building in the yard. A green Upgrade arrow shows what you can afford.</p></div>`;
     },
   },
@@ -141,43 +150,53 @@ export const PANELS = {
 
   // ---- supply lines: what runs by itself ------------------------------------------------------
   supply: {
-    cls: 'wide',
+    cls: 'sheet-up',
     render(ui) {
       const g = ui.game, s = g.s;
-      const node = (icon, label, alt = '') => `<span class="cn">${ic(icon, 44, '', alt)}<small>${label}</small></span>`;
-      const arrow = (on) => `<i class="ar ${on ? 'on' : ''}" aria-hidden="true"></i>`;
-      const chain = `<div class="chains">
-        <div class="chain">${node('farm_plot', 'Farm')}${arrow(g.autoOn('baskets'))}${node('granary', 'Storage')}${arrow(g.autoOn('kitchen'))}${node('upg_kitchen', 'Kitchen', 'item_food_bowl')}${arrow(g.autoOn('kitchen'))}${node('camp_1', 'Wanderers')}</div>
-        <div class="chain">${node('res_wood', 'Wood, Stone')}${arrow(g.autoOn('bell'))}${node('sawmill', 'Materials')}${arrow(g.autoOn('crateline'))}${node('workshop', 'Crates')}${arrow(g.autoOn('courier'))}${node('pool_shrine', 'Reward Pool')}</div>
-      </div>`;
-      const rows = UPGRADE_ORDER.map((k) => {
-        const U = UPGRADES[k], own = g.hasUpg(k), a = s.auto[k] || {}, chk = own ? null : g.checkUpgradeBuy(k);
-        let body = '';
-        if (own) {
-          if (k === 'kitchen') {
-            const cap = g.larderCap(), meals = Math.floor(s.larder / 20);
-            body = `<div class="set"><label>Keep up to <b id="au-kitchen-stock">${a.stock}</b> Biopoints in the Kitchen<input type="range" min="0" max="${cap}" step="10" value="${Math.min(a.stock, cap)}" data-input="autoNum" data-k="kitchen" data-key="stock"></label>
-              <label>Keep at least <b id="au-kitchen-floor">${a.floor}</b> in Storage<input type="range" min="0" max="300" step="10" value="${a.floor}" data-input="autoNum" data-k="kitchen" data-key="floor"></label>
-              <div class="now">${ic('res_bio', 22)}Kitchen now <b>${Math.floor(s.larder)} / ${Math.min(a.stock, cap)}</b> · about ${meals} ${meals === 1 ? 'meal' : 'meals'} · Camp level ${g.first('camp') ? g.first('camp').level : 0} holds ${cap}</div></div>`;
-          } else if (k === 'bell') {
-            body = `<div class="set three">${['wood', 'stone', 'ore'].map((r) => `<label>${ic(RES[r].icon, 20)}Keep at least <b id="au-bell-${r}">${(a.keep || {})[r] || 0}</b><input type="range" min="0" max="${Math.max(100, g.capOf(r))}" step="10" value="${(a.keep || {})[r] || 0}" data-input="autoNum" data-k="bell" data-key="keep.${r}"></label>`).join('')}</div>`;
-          } else if (k === 'crateline') {
-            const ws = g.first('workshop');
-            body = `<div class="set"><div class="pickres">${Object.entries(CRATES).map(([ck, c]) => `<button class="${a.key === ck ? 'on' : ''}" data-act="autoPick" data-k="crateline" data-key="key" data-val="${ck}" ${ws && ws.level >= c.workshop ? '' : 'disabled'}>${ic(c.icon, 28)}${c.name}</button>`).join('')}</div>
-              <div class="set three"><label>${ic('res_bio', 20)}Keep at least <b id="au-crateline-keepBio">${a.keepBio}</b><input type="range" min="0" max="${Math.max(200, g.capOf('bio'))}" step="10" value="${a.keepBio}" data-input="autoNum" data-k="crateline" data-key="keepBio"></label>
-              ${['wood', 'stone'].map((r) => `<label>${ic(RES[r].icon, 20)}Keep at least <b id="au-crateline-${r}">${(a.keep || {})[r] || 0}</b><input type="range" min="0" max="${Math.max(100, g.capOf(r))}" step="10" value="${(a.keep || {})[r] || 0}" data-input="autoNum" data-k="crateline" data-key="keep.${r}"></label>`).join('')}</div></div>`;
-          }
-          return `<div class="sline own ${a.on ? 'on' : 'off'}">${ic(U.icon, 64, '', U.alt)}<div class="grow"><div class="t"><b>${U.name}</b><span class="tag ${a.on ? 'green' : ''}">${a.on ? 'Running' : 'Paused'}</span></div><p>${U.desc}</p>${a.on ? body : ''}</div>
-            <button class="switch ${a.on ? 'on' : ''}" role="switch" aria-checked="${!!a.on}" aria-label="${U.name}" data-act="autoToggle" data-k="${k}"><i></i></button></div>`;
+      const owned = UPGRADE_ORDER.filter((k) => g.hasUpg(k)).length;
+      const settings = (k, a) => {
+        if (k === 'kitchen') {
+          const cap = g.larderCap(), meals = Math.floor(s.larder / 20);
+          return `<div class="set"><label>Food set aside for Wanderers: <b id="au-kitchen-stock">${a.stock}</b> Biopoints<input type="range" min="0" max="${cap}" step="10" value="${Math.min(a.stock, cap)}" data-input="autoNum" data-k="kitchen" data-key="stock"></label>
+            <label>Never take Storage below <b id="au-kitchen-floor">${a.floor}</b><input type="range" min="0" max="300" step="10" value="${a.floor}" data-input="autoNum" data-k="kitchen" data-key="floor"></label>
+            <div class="now">${ic('res_bio', 22)}Set aside now <b>${Math.floor(s.larder)} / ${Math.min(a.stock, cap)}</b> · about ${meals} ${meals === 1 ? 'meal' : 'meals'}</div></div>`;
         }
-        const needB = U.needs && !g.first(U.needs);
-        return `<div class="sline locked">${ic(U.icon, 64, '', U.alt)}<div class="grow"><div class="t"><b>${U.name}</b></div><p>${U.desc}</p>
-            <div class="row wrap" style="gap:8px 14px">${ui.costHtml({ res: U.cost }, { noTime: true })}${s.level < U.level ? `<span class="req">Needs Homestead level ${U.level} · you are ${s.level}</span>` : ''}${needB ? `<span class="req">Needs a ${BUILDINGS[U.needs].name}</span>` : ''}</div></div>
-          <button class="btn ${chk.ok ? 'green' : 'off'}" data-act="buyUpg" data-k="${k}">${chk.ok ? 'Unlock' : 'Locked'}</button></div>`;
+        if (k === 'bell') return `<div class="set"><label>Craft until you have <b id="au-bell-upTo">${a.upTo ?? 40}</b> of each good<input type="range" min="10" max="${Math.max(100, g.capOf('planks'))}" step="10" value="${a.upTo ?? 40}" data-input="autoNum" data-k="bell" data-key="upTo"></label></div><div class="set three">${['wood', 'stone', 'ore'].map((r) => `<label>${ic(RES[r].icon, 20)}Keep at least <b id="au-bell-${r}">${(a.keep || {})[r] || 0}</b><input type="range" min="0" max="${Math.max(100, g.capOf(r))}" step="10" value="${(a.keep || {})[r] || 0}" data-input="autoNum" data-k="bell" data-key="keep.${r}"></label>`).join('')}</div>`;
+        if (k === 'crateline') {
+          const ws = g.first('workshop');
+          return `<div class="set"><div class="pickres">${Object.entries(CRATES).map(([ck, c]) => `<button class="${a.key === ck ? 'on' : ''}" data-act="autoPick" data-k="crateline" data-key="key" data-val="${ck}" ${ws && ws.level >= c.workshop ? '' : 'disabled'}>${ic(c.icon, 28)}${c.name}</button>`).join('')}</div>
+            <div class="set three"><label>${ic('res_bio', 20)}Keep at least <b id="au-crateline-keepBio">${a.keepBio}</b><input type="range" min="0" max="${Math.max(200, g.capOf('bio'))}" step="10" value="${a.keepBio}" data-input="autoNum" data-k="crateline" data-key="keepBio"></label>
+            ${['wood', 'stone'].map((r) => `<label>${ic(RES[r].icon, 20)}Keep at least <b id="au-crateline-${r}">${(a.keep || {})[r] || 0}</b><input type="range" min="0" max="${Math.max(100, g.capOf(r))}" step="10" value="${(a.keep || {})[r] || 0}" data-input="autoNum" data-k="crateline" data-key="keep.${r}"></label>`).join('')}</div></div>`;
+        }
+        return '';
+      };
+      const card = (k) => {
+        const U = UPGRADES[k], own = g.hasUpg(k), a = s.auto[k] || {};
+        const where = U.at.map((t) => BUILDINGS[t].name).join(', ');
+        const head2 = `<span class="au-ic">${ic(U.icon, 56, '', U.alt)}</span><span class="au-tx"><span class="au-nm"><b>${U.name}</b>${own ? `<span class="tag ${a.on ? 'green' : ''}">${a.on ? 'On' : 'Off'}</span>` : ''}</span><small class="au-at">${ic(BUILDINGS[U.at[0]].icon, 18)}Upgrade for the ${where}</small><span class="au-does">${U.does}</span></span>`;
+        if (own) return `<div class="au-card own ${a.on ? 'on' : 'off'}"><div class="au-top">${head2}<button class="switch ${a.on ? 'on' : ''}" role="switch" aria-checked="${!!a.on}" aria-label="${U.name}" data-act="autoToggle" data-k="${k}"><i></i></button></div>${a.on ? settings(k, a) : ''}</div>`;
+        // locked: a checklist of exactly what is needed, and ONE button that does the next thing
+        const chk = g.checkUpgradeBuy(k), hasB = U.at.some((t) => g.first(t)), lvlOk = s.level >= U.level, canPay = g.canAfford({ res: U.cost });
+        const req = (ok, text) => `<li class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'} ${text}</li>`;
+        let cta;
+        if (!hasB) cta = `<button class="btn" data-act="buildPick" data-type="${U.at[0]}">Build the ${BUILDINGS[U.at[0]].name}</button>`;
+        else if (!lvlOk) cta = `<button class="btn ghost" data-act="open" data-panel="level">Reach level ${U.level} · how?</button>`;
+        else if (!canPay) { const m = chk.miss; cta = `<button class="btn off" data-act="buyUpg" data-k="${k}">${m && m !== 'eth' ? `Need ${fmt(Math.ceil(U.cost[m] - (s.res[m] || 0)))} more ${resName(m)}` : 'Not enough yet'}</button>`; }
+        else cta = `<button class="btn green" data-act="buyUpg" data-k="${k}">Unlock</button>`;
+        return `<div class="au-card locked ${chk.ok ? 'ready' : ''}"><div class="au-top">${head2}</div>
+          <ul class="au-req">${req(hasB, `${BUILDINGS[U.at[0]].name}${U.at.length > 1 ? ' (or ' + U.at.slice(1).map((t) => BUILDINGS[t].name).join(', ') + ')' : ''} built`)}${req(lvlOk, `Homestead level ${U.level}${lvlOk ? '' : ` (you are ${s.level})`}`)}</ul>
+          <div class="au-buy">${ui.costHtml({ res: U.cost }, { noTime: true })}${cta}</div></div>`;
+      };
+      const lines = AUTO_LINES.map((L) => {
+        const ks = UPGRADE_ORDER.filter((k) => UPGRADES[k].line === L.id);
+        const strip = L.steps.map(([icon, label]) => `<span class="au-step">${ic(icon, 30)}<i>${label}</i></span>`).join('<b class="au-arr" aria-hidden="true">›</b>');
+        return `<section class="au-line"><h3>${ic(L.icon, 22)}<b>${L.name}</b><span>${ks.filter((k) => g.autoOn(k)).length} of ${ks.length} running</span></h3>
+          <div class="au-strip">${strip}</div><p class="au-lt">${L.text}</p>${ks.map(card).join('')}</section>`;
       }).join('');
-      return `${head('ui_supply', 'Supply lines', 'Turn it on once. It runs automatically while you have resources.', 'ui_storage')}
-        <div class="body">${chain}${rows}
-          <p class="muted" style="margin-top:10px">A lit arrow means that step is automatic. Automation also works while you are away. Workers still make everything faster.</p></div>`;
+      return `${head('ui_supply', 'Automation', `Upgrades that do the tapping for you · ${owned} of ${UPGRADE_ORDER.length} unlocked`, 'ui_storage')}
+        <div class="body blist">
+          <p class="au-intro">These are <b>upgrades for buildings you already have</b>, not new buildings. Unlock one and that job runs by itself, also while you are away.</p>
+          ${lines}</div>`;
     },
   },
 
@@ -584,7 +603,7 @@ export const PANELS = {
           break;
         case 'warehouse': info = `<span class="tag navy">Storage ×${(1 + g.byType('warehouse').reduce((a, x) => a + BUILDINGS.warehouse.capMul[x.level - 1], 0)).toFixed(1)}</span>`; break;
         case 'granary': info = `<span class="tag navy">Biopoints cap ${fmt(g.capOf('bio'))}</span>`; break;
-        case 'workshop': info = auto('crateline', 'Crate Line'); acts += `<button class="btn sm green" data-act="open" data-panel="workshop">Craft Crates</button>`; break;
+        case 'workshop': info = auto('crateline', 'Auto-Crates'); acts += `<button class="btn sm green" data-act="open" data-panel="workshop">Craft Crates</button>`; break;
         case 'pool_shrine': info = `<span class="tag eth">${ic('item_globe', 14, '', 'item_star')}Reward Pool pays in ${fmtClock(g.epochLeft())}</span>${g.poolBonus() ? `<span class="tag">+${Math.round(g.poolBonus() * 100)}% points</span>` : ''}${auto('courier', 'Courier')}`; acts += `<button class="btn sm eth" data-act="open" data-panel="pool">Go to Reward Pool</button>`; break;
         case 'exchange': info = `<span class="tag navy">${ic('item_globe', 14, '', 'item_star')}World Exchange · fee ${(g.exFee() * 100).toFixed(0)}%</span>`; acts += `<button class="btn sm green" data-act="open" data-panel="exchange">Trade</button>`; break;
         case 'balloon_dock': info = `<span class="tag navy">Squads ${g.s.expeditions.length}/${g.parallelMax()}</span><span class="tag">Zones ${BUILDINGS.balloon_dock.regions[b.level - 1]}/4</span><span class="tag">${Object.keys(TRANSPORT).filter((k) => g.transportOpen(k)).map((k) => TRANSPORT[k].name).join(', ')}</span>`; main = `<button class="btn green big wide" data-act="expeditions">${ic('ui_expeditions', 34, '', 'item_compass')}Go to Frontier<span class="sub">send a squad for loot and resources</span></button>`; break;
@@ -597,7 +616,7 @@ export const PANELS = {
         const room = g.queueCap(b) - (b.queue || 0) - (b.stored || 0);
         let can = room; for (const k of inK) can = Math.min(can, Math.floor((g.s.res[k] || 0) / d.recipe.in[k]));
         info = `<span class="cost">${inK.map(k => `<span>${ic(resIcon(k), 20)}${d.recipe.in[k]}</span>`).join('')}<span>→</span><span>${ic(resIcon(outK), 20)}${d.recipe.out[outK]}</span><span>${ic('item_hourglass', 18)}${fmtTime(g.batchTime(b))}</span></span>
-          <span class="tag ${b.queue ? 'gold' : ''}">Queue ${b.queue || 0}${b.stored ? ` · ready ${b.stored}` : ''} / ${g.queueCap(b)}</span>${auto('bell', "Foreman's Bell")}`;
+          <span class="tag ${b.queue ? 'gold' : ''}">Queue ${b.queue || 0}${b.stored ? ` · ready ${b.stored}` : ''} / ${g.queueCap(b)}</span>${auto('bell', 'Auto-craft')}`;
         acts += `<button class="btn sm green ${can > 0 ? '' : 'off'}" data-act="enqueue" data-id="${b.id}" data-n="1">+1</button><button class="btn sm green ${can > 1 ? '' : 'off'}" data-act="enqueue" data-id="${b.id}" data-n="5">+5</button><button class="btn sm green ${can > 0 ? '' : 'off'}" data-act="enqueue" data-id="${b.id}" data-n="999">Max ${Math.max(0, can)}</button>`;
         if (b.stored) acts += `<button class="btn sm" data-act="collect" data-id="${b.id}">Collect</button>`;
       }

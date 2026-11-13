@@ -1064,9 +1064,9 @@ export class Game {
     const U = UPGRADES[k];
     if (!U) return { ok: false };
     if (this.hasUpg(k)) return { ok: false, why: 'Already unlocked', owned: true };
-    if (U.needs && !this.first(U.needs)) return { ok: false, why: `Build a ${BUILDINGS[U.needs].name} first`, needs: U.needs };
+    if (U.at && !U.at.some(t => this.first(t))) return { ok: false, why: `Build a ${BUILDINGS[U.at[0]].name} first`, needs: U.at[0] };
     if (this.s.level < U.level) return { ok: false, why: `Needs Homestead level ${U.level}`, level: U.level };
-    if (!this.canAfford({ res: U.cost })) return { ok: false, why: 'Not enough resources', afford: false };
+    if (!this.canAfford({ res: U.cost })) return { ok: false, why: 'Not enough resources', afford: false, miss: this.missing({ res: U.cost })[0] };
     return { ok: true };
   }
   buyUpgrade(k) {
@@ -1137,6 +1137,8 @@ export class Game {
           for (const k in d.recipe.in) n = Math.min(n, Math.floor(((s.res[k] || 0) - (keep[k] || 0)) / d.recipe.in[k]));
           const outK = Object.keys(d.recipe.out)[0];
           n = Math.min(n, Math.floor((this.capOf(outK) - (s.res[outK] || 0)) / d.recipe.out[outK]));
+          // stop at the stock you asked for, so it never turns all your Wood and Stone into goods you do not need
+          n = Math.min(n, Math.floor(((s.auto.bell.upTo ?? 40) - (s.res[outK] || 0) - (b.stored || 0)) / d.recipe.out[outK]));
           if (n > 0) this.enqueue(b.id, n);
         }
       }
@@ -1226,7 +1228,7 @@ export class Game {
     for (const k of UPGRADE_ORDER) {
       if (this.hasUpg(k)) continue;
       const chk = this.checkUpgradeBuy(k);
-      out.push({ icon: UPGRADES[k].icon, alt: UPGRADES[k].alt, text: `Unlock the ${UPGRADES[k].name}`, why: chk.ok ? UPGRADES[k].desc : chk.why, act: 'open', args: { panel: 'supply' }, btn: 'Go', locked: !chk.ok });
+      out.push({ icon: UPGRADES[k].icon, alt: UPGRADES[k].alt, text: `Unlock ${UPGRADES[k].name}`, why: chk.ok ? UPGRADES[k].desc : chk.why, act: 'open', args: { panel: 'supply' }, btn: 'Go', locked: !chk.ok });
       break;
     }
     return out.slice(0, 7);

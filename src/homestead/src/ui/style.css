@@ -752,3 +752,22 @@ button.tag { pointer-events: auto; cursor: pointer; border: 0; font-family: inhe
 .cconf i { position: absolute; top: 0; width: var(--w); height: calc(var(--w) * .62); border-radius: 2px; opacity: 0; animation: cconf var(--d) cubic-bezier(.15, .7, .3, 1) forwards; }
 @keyframes cconf { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 55% { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 1; } 100% { transform: translate(calc(var(--x) * 1.15), calc(var(--y) + 240px)) rotate(calc(var(--r) * 1.6)); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cconf { display: none; } }
+
+/* ---- Automation (was "Supply lines"): one card per upgrade, grouped by the line it automates ---- */
+.au-intro { margin: 2px 0 6px; padding: 9px 12px; border-radius: 14px; background: #dfe4ff; color: #2b3580; font-size: 13.5px; font-weight: 700; line-height: 1.35; }
+.au-line h3 span { margin-left: auto; }
+.au-strip { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; border-radius: 14px; background: var(--inset); }
+.au-step { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; } .au-step .ic { width: 30px; height: 30px; } .au-step i { font-style: normal; font-size: 11px; font-weight: 900; color: var(--ink); white-space: nowrap; }
+.au-arr { font-size: 22px; font-weight: 900; color: var(--navy); margin: 0 4px 14px; }
+.au-lt { margin: 6px 2px 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); line-height: 1.35; }
+.au-card { background: var(--inset); border-radius: 18px; padding: 10px 12px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+.au-card.locked { background: var(--inset-d); } .au-card.ready { box-shadow: 0 0 0 3px var(--olive-l); background: #eef3d6; } .au-card.own.on { box-shadow: inset 5px 0 0 0 var(--olive-l); }
+.au-top { display: flex; gap: 10px; align-items: flex-start; } .au-top .switch { margin-top: 4px; }
+.au-ic { flex: none; width: 56px; height: 56px; display: grid; place-items: center; } .au-ic .ic { width: 52px; height: 52px; } .au-card.locked:not(.ready) .au-ic .ic { filter: grayscale(.7) opacity(.8); }
+.au-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.au-nm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .au-nm b { font-size: 17px; font-weight: 900; color: var(--navy); }
+.au-at { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 900; color: var(--ink-2); } .au-at .ic { width: 18px; height: 18px; }
+.au-does { font-size: 13.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.au-req { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.au-req li { font-size: 12.5px; font-weight: 900; padding: 4px 10px; border-radius: 10px; background: var(--paper); } .au-req li.ok { color: var(--olive); } .au-req li.no { color: var(--alert); }
+.au-buy { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; } .au-buy .btn { flex: 1 1 150px; }
