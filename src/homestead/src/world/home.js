@@ -6,7 +6,9 @@ import { TILE, GRID, BUILDINGS, CROPS, CLEARABLES, ACTIVITIES, CHAINER_SCALE, LA
 import { mulberry32, clamp, lerp, rand, pick, easeOutCubic, easeInOut } from '../core/util.js';
 
 const FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];   // tile direction a building faces for rot 0..3
-const WALK_SPEED = 3.4;
+// Home is cosy, not a race: a Chainer with nothing to do strolls, one with somewhere to be jogs.
+// Cosmetic only (no rule is timed by it); the gaits in avatar.js follow whatever speed this gives.
+const STROLL_SPEED = 1.05, JOG_SPEED = 2.6;
 const hash01 = (x, z, s) => {
   let n = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(s, 362437)) | 0;
   n = Math.imul(n ^ (n >>> 13), 1274126177);
@@ -241,7 +243,7 @@ export class HomeWorld {
       else if (nm.startsWith('glow_')) this.engine.glowOf(n, into.glow);
       else if (fxList && nm.startsWith('fx_')) {
         const kind = nm.startsWith('fx_smoke') ? 'smoke' : nm.startsWith('fx_fire') ? 'fire' : nm.startsWith('fx_sparkle') ? 'sparkle' : null;
-        if (kind) fxList.push(this.fx.emitter(kind, n, kind === 'smoke' ? 1.6 : kind === 'fire' ? 7 : 2.2, kind === 'sparkle' ? 1.2 : 1));
+        if (kind) fxList.push(this.fx.emitter(kind, n, kind === 'smoke' ? 2.6 : kind === 'fire' ? 9 : 2.2, kind === 'sparkle' ? 1.2 : kind === 'smoke' && n.getPosition().y < 3 ? 0.62 : 1));      // a campfire smokes less than a chimney
       }
     });
   }
@@ -280,6 +282,7 @@ export class HomeWorld {
       v.model = e.model(modelName, { size: [size[0] * TILE - 0.4, 2.2, size[1] * TILE - 0.4], color: '#d9a066' });
       v.root.addChild(v.model);
       this._collectAnim(v.model, v.anim, v.fx);
+      if (b.type === 'decor_pond') v.fx.push(this.fx.emitter('glint', v.model, 2.4, 0.42, [0, 0.16, 0], { shape: 'disc', radius: Math.min(size[0], size[1]) * TILE * 0.3 }));      // the sun on the water
       walk(v.model, (n) => { const m = /^slot_(\d+)/.exec(n.name || ''); if (m) v.slots[+m[1]] = n; });
       if (pop) this.fx.pop(v.model, 0.3, 0.5);
     }
@@ -297,7 +300,7 @@ export class HomeWorld {
     if (!v) return;
     for (const f of v.fx) f.stop();
     const c = this.center(b);
-    this.fx.burst('dust', c.x, 0.5, c.z, 14, 1.4);
+    this.fx.burst('dust', c.x, 0.4, c.z, 14, 1.3, { shape: 'ring', radius: Math.max(c.w, c.d) * TILE * 0.3, up: 1.5 });
     v.root.destroy();
     this.bviews.delete(b.id);
   }
@@ -327,7 +330,7 @@ export class HomeWorld {
           v.crops.push(m);
           if (stage === 3) this.fx.pop(m, 0.7, 0.4);
         }
-        if (stage === 3) { const c = this.center(b); this.fx.burst('sparkle', c.x, 1.4, c.z, 8); }
+        if (stage === 3) { const c = this.center(b); this.fx.burst('sparkle', c.x, 0.9, c.z, 8, 1, { shape: 'fountain', radius: 0.9, angle: 10, delay: 0.3 }); }
       }
     }
     if (b.crop && stage === 2) { const s = lerp(0.42, 0.92, (k - 0.3) / 0.7); for (const m of v.crops) m.setLocalScale(s, s, s); }
@@ -354,9 +357,11 @@ export class HomeWorld {
     if (!v) return;
     const p = v.m.getLocalPosition();
     if (burst) {
-      const kind = c.type.startsWith('rock') ? 'pebbles' : c.type.startsWith('bush') ? 'leaves' : 'chips';
-      this.fx.burst(kind, p.x, 1.0, p.z, 16, 1.2);
-      this.fx.burst('dust', p.x, 0.3, p.z, 8);
+      const kind = c.type.startsWith('rock') ? 'pebbles' : c.type.startsWith('bush') ? 'leaves' : 'chips', tall = c.type.startsWith('tree');
+      this.fx.fell(kind, p.x, p.z, tall, c.sc);
+      this.cviews.delete(c.id);
+      this.fx.shrinkAway(v.m, tall ? 0.5 : 0.36);      // it shrinks out of the world (and destroys itself) instead of blinking off
+      return;
     }
     v.m.destroy();
     this.cviews.delete(c.id);
@@ -415,7 +420,8 @@ export class HomeWorld {
   _removeAvatar(c, how) {
     const v = this.aviews.get(c.id);
     if (!v) return;
-    this.fx.burst(how === 'thanks' ? 'hearts' : 'dust', v.x, 1.6, v.z, how === 'thanks' ? 10 : 12);
+    if (how === 'thanks') this.fx.burst('hearts', v.x, 1.6, v.z, 10, 1, { shape: 'fountain', angle: 30, delay: 0.3 });
+    this.fx.poof(v.x, v.z);
     v.av.destroy();
     this.aviews.delete(c.id);
   }
@@ -471,14 +477,14 @@ export class HomeWorld {
     if (!away && v.gone) {
       // home from the frontier: step back in through the gate
       v.gone = false; v.x = gate.x + rand(-1.2, 1.2); v.z = gate.z + 0.6; v.path = null; v.mode = '';
-      av.entity.enabled = true; this.fx.pop(av.entity, 0.4, 0.4);
+      av.entity.enabled = true; this.fx.pop(av.entity, 0.4, 0.4); this.fx.poof(v.x, v.z, 0.9);
     }
     if (v.gone) return;
     let want = 'idle', tool = null, face = null, dest = null;
     if (away) {
       // setting off: walk to the gate and out of sight
       if (v.mode !== 'toGate') { v.mode = 'toGate'; this._goto(v, gate.x + rand(-0.8, 0.8), gate.z + 1.2); }
-      if (!v.path || Math.hypot(v.x - gate.x, v.z - gate.z) < 1.5) { v.gone = true; av.entity.enabled = false; return; }
+      if (!v.path || Math.hypot(v.x - gate.x, v.z - gate.z) < 1.5) { v.gone = true; av.entity.enabled = false; if (this.active !== false) this.fx.depart(v.x, v.z, 0, 1); return; }
     } else if (c.status === 'build') {
       const b = g.building(c.jobAt);
       if (b) {
@@ -544,7 +550,9 @@ export class HomeWorld {
     if (v.path && v.path.length) {
       const p = v.path[0];
       const dx = p.x - v.x, dz = p.z - v.z, d = Math.hypot(dx, dz);
-      const step = WALK_SPEED * dt;
+      // facing lags the path at a corner: slow down while the body is still turning, so it steps round instead of skating sideways
+      const off = Math.abs(((Math.atan2(dx, dz) * 180 / Math.PI - v.yaw + 540) % 360) - 180);
+      const step = (v.mode === 'wander' || v.mode === 'toRest' ? STROLL_SPEED : JOG_SPEED) * clamp(1.3 - off / 100, 0.6, 1) * dt;      // never below 0.6: a jog must stay a jog (avatar.js would swap to the walk clip for a moment)
       if (d <= step) { v.x = p.x; v.z = p.z; v.path.shift(); if (!v.path.length) v.path = null; }
       else { v.x += dx / d * step; v.z += dz / d * step; }
       face = { x: v.x + dx, z: v.z + dz };
@@ -561,20 +569,27 @@ export class HomeWorld {
     av.entity.setLocalEulerAngles(0, v.yaw, 0);
     c.px = v.x; c.pz = v.z;
   }
+  /** A Chainer is clearing something: chips, the prop's flinch and the sound land on the frame the swing lands. */
   _strike(v, cl, dt) {
+    v.strike = cl.id; v.strikeAt = performance.now();
+    if (!v.av.onHit) v.av.onHit = () => { if (v.c.status === 'clearing' && performance.now() - (v.strikeAt || 0) < 400) this._blow(v); };
+    // safety net: if the swing clip is missing (so no hit frame ever comes), still strike about once a second
     v.hitT -= dt;
     if (v.hitT > 0) return;
-    v.hitT = 1.0;
-    const cv = this.cviews.get(cl.id);
+    v.hitT = 1.6;
+    if (performance.now() - (v.blowAt || 0) > 1500) this._blow(v);
+  }
+  _blow(v) {
+    const cl = this.game.s.clearables.find((x) => x.id === v.strike), cv = cl && this.cviews.get(cl.id);
     if (!cv) return;
+    v.blowAt = performance.now();
     const p = cv.m.getLocalPosition();
     const kind = cl.type.startsWith('rock') ? 'pebbles' : cl.type.startsWith('bush') ? 'leaves' : 'chips';
-    setTimeout(() => {
-      if (!this.cviews.has(cl.id)) return;
-      this.fx.burst(kind, p.x, 1.2, p.z, 5);
-      this.fx.squash(cv.m, 0.1, 0.25, cl.sc);
-      this.cb.sfx && this.cb.sfx(kind === 'pebbles' ? 'clink' : 'chop');
-    }, 620);
+    // chips fly from where the tool lands: the side the Chainer stands on, at the height of the thing
+    const d = Math.hypot(v.x - p.x, v.z - p.z) || 1, off = Math.min(0.32, d * 0.3), low = /^(log|stump)/.test(cl.type);
+    this.fx.chop(kind, p.x + (v.x - p.x) / d * off, low ? 0.6 : kind === 'pebbles' ? 0.95 : 1.15, p.z + (v.z - p.z) / d * off, cl.type.startsWith('tree'));
+    this.fx.squash(cv.m, 0.1, 0.25, cl.sc);
+    this.cb.sfx && this.cb.sfx(kind === 'pebbles' ? 'clink' : 'chop');
   }
 
   // ------------------------------------------------------------------------------------------
@@ -582,24 +597,24 @@ export class HomeWorld {
   // ------------------------------------------------------------------------------------------
   _bind() {
     const bus = this.game.bus, sfx = (n) => this.cb.sfx && this.cb.sfx(n);
-    bus.on('building:add', (b) => { this._addBuilding(b); this.rebuildGround(); const c = this.center(b); this.fx.burst('dust', c.x, 0.4, c.z, 12, 1.3); sfx('place'); });
+    bus.on('building:add', (b) => { const v = this._addBuilding(b); this.rebuildGround(); const c = this.center(b); this.fx.land(v.site || v.model); this.fx.thump(c.x, c.z, c.w * TILE / 2, c.d * TILE / 2); sfx('place'); });
     bus.on('building:change', (b) => { const v = this.bviews.get(b.id); if (v) this._refreshBuilding(v, true); });
     bus.on('building:move', (b) => {
       const v = this.bviews.get(b.id);
-      if (v) { const c = this.center(b); v.root.setLocalPosition(c.x, 0, c.z); v.root.setLocalEulerAngles(0, 90 * (b.rot % 4), 0); this.fx.pop(v.root, 0.8, 0.3); }
+      if (v) { const c = this.center(b); v.root.setLocalPosition(c.x, 0, c.z); v.root.setLocalEulerAngles(0, 90 * (b.rot % 4), 0); this.fx.land(v.root, 0.16, 0.36); this.fx.thump(c.x, c.z, c.w * TILE / 2, c.d * TILE / 2, 0.75); }
       this.rebuildGround(); sfx('place');
     });
     bus.on('building:done', (b, isNew) => {
       const v = this.bviews.get(b.id);
       if (v) this._refreshBuilding(v, true);
       const c = this.center(b);
-      this.fx.burst('confetti', c.x, 2.5, c.z, isNew ? 26 : 40, 1.2);
-      this.fx.burst('sparkle', c.x, 3, c.z, 12, 1.6);
-      this.engine.shake(0.25);
+      const small = b.type === 'farm_plot' || BUILDINGS[b.type].cat === 'decor';
+      this.fx.built(c.x, c.z, c.w * TILE / 2, c.d * TILE / 2, isNew, small ? 1.6 : 3.2);
+      if (v && v.model) this.fx.settle(v.model, isNew ? 0.55 : 0.8, 0.75);      // up out of the site, past its size, and down to rest
       sfx(isNew ? 'built' : 'upgrade');
     });
     bus.on('building:remove', (b) => { this._removeBuilding(b); this.rebuildGround(); });
-    bus.on('land', () => { this._edgeHalf = -1; this.rebuildGround(); this._landSigns(); this.engine.shake(0.4); const h = this.game.half() * TILE; for (let i = 0; i < 4; i++) this.fx.burst('confetti', [h, -h, 0, 0][i], 2, [0, 0, h, -h][i], 20, 1.4); sfx('upgrade'); });
+    bus.on('land', () => { this._edgeHalf = -1; this.rebuildGround(); this._landSigns(); this.fx.shake(0.4); const h = this.game.half() * TILE; for (let i = 0; i < 4; i++) { const x = [h, -h, 0, 0][i], z = [0, 0, h, -h][i]; this.fx.burst('confetti', x, 1.2, z, 18, 1.3, { shape: 'fountain', angle: 30, delay: 0.3 }); this.fx.ring(x, 0.1, z, 1, 6, { life: 0.6, width: 0.3, delay: i * 0.06 }); } sfx('upgrade'); });
     bus.on('clear:spawn', (c) => this._addClearable(c));
     bus.on('clear:done', (c, got) => {
       const v = this.cviews.get(c.id);
@@ -610,18 +625,18 @@ export class HomeWorld {
     });
     bus.on('guest:arrive', (c) => { this._addAvatar(c, true); sfx('arrive'); });
     bus.on('chainer:leave', (c, how) => this._removeAvatar(c, how));
-    bus.on('guest:fed', (c, auto) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('hearts', v.x, 2.2, v.z, 10); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('yum'); if (auto) this.cb.toast && this.cb.toast(`${c.name} was fed from the camp larder`, 'good', 'item_food_bowl'); });
-    bus.on('chainer:recruited', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('confetti', v.x, 2.4, v.z, 36, 1.2); this.fx.burst('coins', v.x, 2.2, v.z, 14); v.emoteT = 1.6; v.emoteKind = 'cheer'; } sfx('fanfare'); });
-    bus.on('chainer:levelup', (c) => { const v = this.aviews.get(c.id); if (v && v.av.entity.enabled) { this.fx.burst('sparkle', v.x, 2.4, v.z, 14, 1.4); v.emoteT = 1.5; v.emoteKind = 'cheer'; } });
-    bus.on('chainer:trained', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('sparkle', v.x, 2.4, v.z, 16, 1.4); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('upgrade'); });
-    bus.on('farm:plant', (b, auto) => { const c = this.center(b); this.fx.burst('dust', c.x, 0.4, c.z, 8); if (!auto) sfx('plant'); });
-    bus.on('farm:harvest', (b, got) => { const c = this.center(b); this.fx.burst('leaves', c.x, 0.8, c.z, 16, 1.2); this.cb.loot && this.cb.loot({ x: c.x, y: 1.4, z: c.z }, got); sfx('harvest'); });
+    bus.on('guest:fed', (c, auto) => { const v = this.aviews.get(c.id); if (v) { this.fx.burst('hearts', v.x, 2.0, v.z, 9, 1, { shape: 'fountain', angle: 30, delay: 0.4 }); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('yum'); if (auto) this.cb.toast && this.cb.toast(`${c.name} was fed by the Camp Kitchen`, 'good', 'item_food_bowl'); });
+    bus.on('chainer:recruited', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.cheer(v.x, 2.4, v.z); this.fx.burst('confetti', v.x, 2.2, v.z, 26, 1.2, { shape: 'fountain', angle: 34, delay: 0.14 }); v.emoteT = 1.6; v.emoteKind = 'cheer'; } sfx('fanfare'); });
+    bus.on('chainer:levelup', (c) => { const v = this.aviews.get(c.id); if (v && v.av.entity.enabled) { this.fx.cheer(v.x, 2.4, v.z); v.emoteT = 1.5; v.emoteKind = 'cheer'; } });
+    bus.on('chainer:trained', (c) => { const v = this.aviews.get(c.id); if (v) { this.fx.cheer(v.x, 2.4, v.z); v.emoteT = 1.5; v.emoteKind = 'cheer'; } sfx('upgrade'); });
+    bus.on('farm:plant', (b, auto) => { const c = this.center(b); this.fx.burst('dust', c.x, 0.4, c.z, 8, 1, { shape: 'ring', radius: 0.8, speed: 0.45 }); this.bounce(b.id); if (!auto) sfx('plant'); });
+    bus.on('farm:harvest', (b, got) => { const c = this.center(b); this.fx.burst('leaves', c.x, 0.7, c.z, 18, 1.35, { shape: 'fountain', angle: 55, radius: 1 }); this.fx.burst('dust', c.x, 0.4, c.z, 8, 1, { shape: 'ring', radius: 1.2, speed: 0.5 }); this.bounce(b.id); this.cb.loot && this.cb.loot({ x: c.x, y: 1.4, z: c.z }, got); sfx('harvest'); });
     bus.on('exp:launch', () => sfx('depart'));
-    bus.on('exp:back', () => { const g = this.gateSpot(); if (this.active !== false) this.fx.burst('sparkle', g.x, 2.4, g.z, 12, 1.4); });
+    bus.on('exp:back', () => { const g = this.gateSpot(); if (this.active !== false) this.fx.arrive(g.x, g.z); });
     bus.on('supply:stored', (b, got) => { const c = this.center(b); this.cb.loot && this.cb.loot({ x: c.x, y: 2.6, z: c.z }, got); sfx('supply'); });
     bus.on('chainer:change', (c) => { if (c.status === 'build') { const v = this.aviews.get(c.id); if (v) v.mode = ''; } });
-    bus.on('pool:deposit', () => { const p = this.game.first('pool_shrine'); if (p) { const c = this.center(p); this.fx.burst('coins', c.x, 3, c.z, 18, 1.2); this.fx.burst('sparkle', c.x, 3.5, c.z, 10, 1.6); } });
-    bus.on('pool:payout', () => { const p = this.game.first('pool_shrine'); if (p) { const c = this.center(p); this.fx.burst('coins', c.x, 3.5, c.z, 46, 1.6); this.fx.burst('confetti', c.x, 3, c.z, 40, 1.5); this.engine.shake(0.4); } });
+    bus.on('pool:deposit', () => { const p = this.game.first('pool_shrine'); if (p) { const c = this.center(p); this.fx.burst('coins', c.x, 2.6, c.z, 16, 1.1, { shape: 'fountain', angle: 26, delay: 0.2 }); this.fx.burst('sparkle', c.x, 3.2, c.z, 10, 1.5, { delay: 0.3 }); this.fx.ring(c.x, 0.1, c.z, 0.8, 3.4, { color: '#c9d2ff' }); } });
+    bus.on('pool:payout', () => { const p = this.game.first('pool_shrine'); if (p) { const c = this.center(p); this.fx.burst('coins', c.x, 3, c.z, 40, 1.4, { shape: 'fountain', angle: 30, delay: 0.5 }); this.fx.burst('confetti', c.x, 3, c.z, 34, 1.3, { shape: 'fountain', angle: 38, delay: 0.25 }); this.fx.ring(c.x, 0.1, c.z, 1, 5, { color: '#c9d2ff', width: 0.3, life: 0.55 }); this.fx.ring(c.x, 0.1, c.z, 0.6, 3.6, { delay: 0.16 }); this.fx.shake(0.4); } });
   }
 
   // ------------------------------------------------------------------------------------------
@@ -831,7 +846,7 @@ export class HomeWorld {
       const y = 2.75 * CHAINER_SCALE;
       // everyone wears a name tag: navy with a level for yours, cream with "Wanderer" for visitors
       out.push({ key: 'n' + c.id, kind: 'tag', x: v.x, y: y - 0.1, z: v.z, text: c.name, rarity: c.rarity, act: 'chainer', id: c.id, mood: g.mood(c), owned: c.owned, level: c.level, sel: this.selected === c.id, left: c.owned ? 0 : c.leavesAt - now, hungry: !c.owned && !c.fed });
-      if (!c.owned && !c.fed) out.push({ key: 'g' + c.id, kind: 'action', x: v.x, y: y + 0.95, z: v.z, icon: 'item_food_bowl', act: 'chainer', id: c.id, bounce: true, alert: true, label: 'Feed' });
+      if (!c.owned && !c.fed) out.push({ key: 'g' + c.id, kind: 'action', x: v.x, y: y + 1.1, z: v.z, icon: 'item_food_bowl', act: 'chainer', id: c.id, bounce: true, alert: true, label: 'Feed' });
       else if (c.status === 'rest') out.push({ key: 'r' + c.id, kind: 'timer', x: v.x, y: y + 0.7, z: v.z, p: clamp((now - (c.restFrom || now)) / Math.max(1, c.restUntil - (c.restFrom || now)), 0, 1), left: c.restUntil - now, icon: 'item_hourglass', small: true });
       else if (c.status === 'train') out.push({ key: 't' + c.id, kind: 'timer', x: v.x, y: y + 0.7, z: v.z, p: 0, left: c.busyUntil - now, icon: 'item_dumbbell', small: true, noBar: true });
     }
@@ -842,7 +857,7 @@ export class HomeWorld {
     // parties that are back wait at the gate with their chest
     const gate = this.gateSpot();
     let bi = 0;
-    for (const e of g.s.expeditions) if (now >= e.endAt) { out.push({ key: 'chest' + e.id, kind: 'action', x: gate.x + (bi - 0.5) * 2.4, y: 3.4, z: gate.z - 1.2, icon: 'chest_wood', alt: 'item_chest', act: 'claim', id: e.id, bounce: true, alert: true, label: 'Open chest' }); bi++; }
+    for (const e of g.s.expeditions) if (now >= e.endAt) { out.push({ key: 'chest' + e.id, kind: 'action', x: gate.x + (bi - 0.5) * 2.4, y: 3.4, z: gate.z - 1.2, icon: 'chest_wood', alt: 'item_chest', act: 'claim', id: e.id, bounce: true, alert: true, label: 'Claim loot' }); bi++; }
     if (g.first('balloon_dock') && !bi) out.push({ key: 'gate', kind: 'action', x: gate.x, y: 4.6, z: gate.z, icon: 'item_compass', act: 'frontier', id: 'gate', small: true, label: 'Frontier' });
     if (this._signPos && g.landCost()) for (let i = 0; i < this._signPos.length; i++) { const s = this._signPos[i]; out.push({ key: 'land' + i, kind: 'action', x: s.x, y: 2.4, z: s.z, icon: 'item_flag', act: 'land', id: 'land', label: 'Expand' }); }
     return out;

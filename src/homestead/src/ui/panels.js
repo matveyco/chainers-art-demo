@@ -12,7 +12,7 @@ const head = (icon, title, sub = '', alt = '') => `<header>${icon ? ic(icon, 46,
 const statusText = (g, c) => {
   const now = g.now();
   switch (c.status) {
-    case 'expedition': return ['On the frontier', 'navy'];
+    case 'expedition': return ['On the Frontier', 'navy'];
     case 'build': return ['Helping build', 'green'];
     case 'rest': return [`Resting ${fmtTime(c.restUntil - now)}`, 'gold'];
     case 'job': { const b = g.building(c.jobAt); return [`Working: ${b ? BUILDINGS[b.type].name : '—'}`, 'green']; }
@@ -72,7 +72,7 @@ export const PANELS = {
         if (st.can && S.k !== 'go') return '';
         return `<button class="brow ${S.k} ${t === goalOpen ? 'want' : ''}" data-act="buildPick" data-type="${t}">
           <span class="pic">${ic(d.icon, 60, '', d.alt || '')}</span>
-          <span class="tx"><span class="nm"><b>${d.name}</b>${max > 1 || cnt ? `<i>${cnt} / ${max}</i>` : ''}${t === goalOpen ? '<span class="tag gold">Your goal</span>' : ''}</span>
+          <span class="tx"><span class="nm"><b>${d.name}</b>${max > 1 || cnt ? `<i>${cnt} / ${max}</i>` : ''}${t === goalOpen ? '<span class="tag gold">Quest</span>' : ''}</span>
             <small>${BUILD_USE[t] || d.desc}${d.cat === 'decor' ? ` · ${ic('item_heart', 14)}+${d.cosy[0]}` : ''}</small>
             ${S.cost ? ui.costHtml(S.cost) : ''}</span>
           <span class="bst">${S.html}</span></button>`;
@@ -81,9 +81,9 @@ export const PANELS = {
       if (next && !st.can) {
         const d = BUILDINGS[next], S = stateOf(next);
         top = `<button class="bnext ${S.k}" data-act="buildPick" data-type="${next}">
-          <span class="lb">${goalOpen ? `Next for your goal · ${esc(q.text)}` : 'A good next step'}</span>
+          <span class="lb">${goalOpen ? `For your quest · ${esc(q.text)}` : 'Build this next'}</span>
           <span class="in"><span class="pic">${ic(d.icon, 84, '', d.alt || '')}</span>
-            <span class="tx"><b>${d.name}</b><small>${d.global ? `Opens the ${d.global}. ` : ''}${d.desc}</small>${S.cost ? ui.costHtml(S.cost) : ''}</span></span>
+            <span class="tx"><b>${d.name}</b><small>${d.global ? `Unlocks the ${d.global}. ` : ''}${d.desc}</small>${S.cost ? ui.costHtml(S.cost) : ''}</span></span>
           <span class="cta ${S.k}">${S.k === 'go' ? `${ic('item_hammer', 24)}Build the ${d.name}` : S.html}</span></button>`;
       }
       const groups = BUILD_GROUPS.map((G) => {
@@ -94,10 +94,10 @@ export const PANELS = {
       const jump = `<div class="jump" role="group" aria-label="Jump to">
         <button class="jchip ${st.can ? 'on' : ''}" data-act="buildCan" aria-pressed="${!!st.can}">Can build now</button>
         ${BUILD_GROUPS.map(G => `<button class="jchip" data-act="buildJump" data-id="${G.id}">${G.name}</button>`).join('')}</div>`;
-      return `${head('ui_build', 'Build', `Everything is in this one list · builders free ${g.builderSlots() - g.activeBuilds()} / ${g.builderSlots()}`, 'item_hammer')}
+      return `${head('ui_build', 'Build', `All buildings in one list · free builders ${g.builderSlots() - g.activeBuilds()} / ${g.builderSlots()}`, 'item_hammer')}
         ${jump}
-        <div class="body blist">${top}${groups || '<p class="muted">Nothing you can build right now. Gather more Wood and Stone, or raise your Chainer Home.</p>'}
-        <p class="muted" style="margin-top:12px">To upgrade, tap a building in the yard. A green Upgrade arrow floats over anything you can afford.</p></div>`;
+        <div class="body blist">${top}${groups || '<p class="muted">Nothing you can build right now. Get more Wood and Stone, or upgrade the Chainer Home.</p>'}
+        <p class="muted" style="margin-top:12px">To upgrade, tap a building in the yard. A green Upgrade arrow shows what you can afford.</p></div>`;
     },
   },
 
@@ -112,12 +112,12 @@ export const PANELS = {
       }).join('');
       const crates = Object.keys(CRATES).map(k => `<div class="line">${ic(CRATES[k].icon, 34)}<b class="grow">${CRATES[k].name}</b><span class="muted">${CRATES[k].points} points each</span><b style="min-width:40px;text-align:right">${s.crates[k] || 0}</b></div>`).join('');
       const up = g.upkeepPerMin();
-      return `${head('ui_storage', 'Storage', 'Warehouse raises every cap, Granary holds more Biopoints')}
+      return `${head('ui_storage', 'Storage', 'Warehouse: more of everything. Granary: more Biopoints')}
         <div class="body">
           ${rows}
           <h3 style="margin-top:14px">Crates for the Reward Pool</h3>
           ${crates}
-          <div class="sheet" style="margin-top:12px"><div class="row">${ic('item_food_bowl', 34)}<div><b>Upkeep ${(up * 60).toFixed(0)} Biopoints an hour</b><div class="muted">Every Chainer and fed Wanderer eats. At zero they go hungry and work at 70%.</div></div></div></div>
+          <div class="sheet" style="margin-top:12px"><div class="row">${ic('item_food_bowl', 34)}<div><b>Upkeep ${(up * 60).toFixed(0)} Biopoints / hour</b><div class="muted">Every Chainer and fed Wanderer eats. At 0 Biopoints they get hungry and work at 70%.</div></div></div></div>
         </div>`;
     },
   },
@@ -130,9 +130,9 @@ export const PANELS = {
       const rows = COSY_TIERS.map((t) => `<div class="line ${t === tier ? 'me' : ''}"><div class="grow"><b>${t.name}</b> <span class="muted">from ${t.min}</span><div class="row" style="gap:4px;margin-top:4px;flex-wrap:wrap">${RARITY_ORDER.map((r, i) => (t.odds[i] ? `<span class="tag" style="background:${RARITY[r].color}22;color:${RARITY[r].color}">${RARITY[r].name} ${t.odds[i]}%</span>` : '')).join('')}</div></div><span class="tag">every ~${fmtTime(t.interval)}</span></div>`).join('');
       return `${head('item_heart', 'Cosiness', 'A cosy home attracts better Wanderers, more often')}
         <div class="body">
-          <div class="row" style="margin-bottom:10px"><div class="big-num" style="color:var(--crimson)">${v}</div><div class="grow"><b>${tier.name}</b>${next ? `<div class="bar pink" style="margin-top:4px"><i style="width:${(v - tier.min) / (next.min - tier.min) * 100}%"></i></div><span class="muted">${next.min - v} more to become ${next.name}</span>` : '<div class="muted">The cosiest home in the New World.</div>'}</div></div>
-          ${g.s.grudge >= 1 ? `<p><span class="tag red">−${Math.round(g.s.grudge)} from unhappy goodbyes</span> <span class="muted">Fades slowly. Sending Wanderers away costs ${GRUDGE.kick}.</span></p>` : ''}
-          <p class="muted">Every building adds a little cosiness; decorations add a lot. Upgrading buildings adds more.</p>
+          <div class="row" style="margin-bottom:10px"><div class="big-num" style="color:var(--crimson)">${v}</div><div class="grow"><b>${tier.name}</b>${next ? `<div class="bar pink" style="margin-top:4px"><i style="width:${(v - tier.min) / (next.min - tier.min) * 100}%"></i></div><span class="muted">${next.min - v} more to reach ${next.name}</span>` : '<div class="muted">Max cosiness level reached.</div>'}</div></div>
+          ${g.s.grudge >= 1 ? `<p><span class="tag red">−${Math.round(g.s.grudge)} from unhappy Wanderers</span> <span class="muted">Recovers slowly. Dismissing a Wanderer costs ${GRUDGE.kick}.</span></p>` : ''}
+          <p class="muted">Buildings add a little cosiness. Decor adds a lot. Upgrades add more.</p>
           ${rows}
         </div>
         <footer><button class="btn" data-act="open" data-panel="build" data-cat="decor">${ic('decor_flowerbed', 22)}Decorate</button></footer>`;
@@ -147,8 +147,8 @@ export const PANELS = {
       const node = (icon, label, alt = '') => `<span class="cn">${ic(icon, 44, '', alt)}<small>${label}</small></span>`;
       const arrow = (on) => `<i class="ar ${on ? 'on' : ''}" aria-hidden="true"></i>`;
       const chain = `<div class="chains">
-        <div class="chain">${node('farm_plot', 'Farm')}${arrow(g.autoOn('baskets'))}${node('granary', 'Store')}${arrow(g.autoOn('kitchen'))}${node('upg_kitchen', 'Larder', 'item_food_bowl')}${arrow(g.autoOn('kitchen'))}${node('camp_1', 'Wanderers')}</div>
-        <div class="chain">${node('res_wood', 'Wood, Stone')}${arrow(g.autoOn('bell'))}${node('sawmill', 'Mills')}${arrow(g.autoOn('crateline'))}${node('workshop', 'Crates')}${arrow(g.autoOn('courier'))}${node('pool_shrine', 'World pool')}</div>
+        <div class="chain">${node('farm_plot', 'Farm')}${arrow(g.autoOn('baskets'))}${node('granary', 'Storage')}${arrow(g.autoOn('kitchen'))}${node('upg_kitchen', 'Kitchen', 'item_food_bowl')}${arrow(g.autoOn('kitchen'))}${node('camp_1', 'Wanderers')}</div>
+        <div class="chain">${node('res_wood', 'Wood, Stone')}${arrow(g.autoOn('bell'))}${node('sawmill', 'Materials')}${arrow(g.autoOn('crateline'))}${node('workshop', 'Crates')}${arrow(g.autoOn('courier'))}${node('pool_shrine', 'Reward Pool')}</div>
       </div>`;
       const rows = UPGRADE_ORDER.map((k) => {
         const U = UPGRADES[k], own = g.hasUpg(k), a = s.auto[k] || {}, chk = own ? null : g.checkUpgradeBuy(k);
@@ -156,9 +156,9 @@ export const PANELS = {
         if (own) {
           if (k === 'kitchen') {
             const cap = g.larderCap(), meals = Math.floor(s.larder / 20);
-            body = `<div class="set"><label>Keep the larder stocked up to <b id="au-kitchen-stock">${a.stock}</b> Biopoints<input type="range" min="0" max="${cap}" step="10" value="${Math.min(a.stock, cap)}" data-input="autoNum" data-k="kitchen" data-key="stock"></label>
-              <label>Never take my store below <b id="au-kitchen-floor">${a.floor}</b><input type="range" min="0" max="300" step="10" value="${a.floor}" data-input="autoNum" data-k="kitchen" data-key="floor"></label>
-              <div class="now">${ic('res_bio', 22)}Larder now <b>${Math.floor(s.larder)} / ${Math.min(a.stock, cap)}</b> · enough for about ${meals} ${meals === 1 ? 'meal' : 'meals'} · camp level ${g.first('camp') ? g.first('camp').level : 0} holds ${cap}</div></div>`;
+            body = `<div class="set"><label>Keep up to <b id="au-kitchen-stock">${a.stock}</b> Biopoints in the Kitchen<input type="range" min="0" max="${cap}" step="10" value="${Math.min(a.stock, cap)}" data-input="autoNum" data-k="kitchen" data-key="stock"></label>
+              <label>Keep at least <b id="au-kitchen-floor">${a.floor}</b> in Storage<input type="range" min="0" max="300" step="10" value="${a.floor}" data-input="autoNum" data-k="kitchen" data-key="floor"></label>
+              <div class="now">${ic('res_bio', 22)}Kitchen now <b>${Math.floor(s.larder)} / ${Math.min(a.stock, cap)}</b> · about ${meals} ${meals === 1 ? 'meal' : 'meals'} · Camp level ${g.first('camp') ? g.first('camp').level : 0} holds ${cap}</div></div>`;
           } else if (k === 'bell') {
             body = `<div class="set three">${['wood', 'stone', 'ore'].map((r) => `<label>${ic(RES[r].icon, 20)}Keep at least <b id="au-bell-${r}">${(a.keep || {})[r] || 0}</b><input type="range" min="0" max="${Math.max(100, g.capOf(r))}" step="10" value="${(a.keep || {})[r] || 0}" data-input="autoNum" data-k="bell" data-key="keep.${r}"></label>`).join('')}</div>`;
           } else if (k === 'crateline') {
@@ -173,11 +173,11 @@ export const PANELS = {
         const needB = U.needs && !g.first(U.needs);
         return `<div class="sline locked">${ic(U.icon, 64, '', U.alt)}<div class="grow"><div class="t"><b>${U.name}</b></div><p>${U.desc}</p>
             <div class="row wrap" style="gap:8px 14px">${ui.costHtml({ res: U.cost }, { noTime: true })}${s.level < U.level ? `<span class="req">Needs Homestead level ${U.level} · you are ${s.level}</span>` : ''}${needB ? `<span class="req">Needs a ${BUILDINGS[U.needs].name}</span>` : ''}</div></div>
-          <button class="btn ${chk.ok ? 'green' : 'off'}" data-act="buyUpg" data-k="${k}">${chk.ok ? 'Get it' : 'Locked'}</button></div>`;
+          <button class="btn ${chk.ok ? 'green' : 'off'}" data-act="buyUpg" data-k="${k}">${chk.ok ? 'Unlock' : 'Locked'}</button></div>`;
       }).join('');
-      return `${head('ui_supply', 'Supply lines', 'Set it once. The homestead does the rest while you have enough.', 'ui_storage')}
+      return `${head('ui_supply', 'Supply lines', 'Turn it on once. It runs automatically while you have resources.', 'ui_storage')}
         <div class="body">${chain}${rows}
-          <p class="muted" style="margin-top:10px">A lit arrow is a line that runs by itself. Lines also work while you are away. Workers still make everything faster.</p></div>`;
+          <p class="muted" style="margin-top:10px">A lit arrow means that step is automatic. Automation also works while you are away. Workers still make everything faster.</p></div>`;
     },
   },
 
@@ -186,24 +186,24 @@ export const PANELS = {
     cls: 'wide',
     render(ui) {
       const g = ui.game, s = g.s, L = g.levelInfo(), q = g.quest(), pr = q ? g.questProgress(q) : null;
-      const track = Object.keys(LEVEL_PERKS).map(Number).sort((a, b) => a - b).map((l) => `<div class="lv ${s.level >= l ? 'done' : l === L.nextPerk ? 'next' : ''}"><span class="n">${l}</span><div>${LEVEL_PERKS[l].map((p) => `<span>${p}</span>`).join('')}</div>${s.level >= l ? '<em>Open</em>' : ''}</div>`).join('');
+      const track = Object.keys(LEVEL_PERKS).map(Number).sort((a, b) => a - b).map((l) => `<div class="lv ${s.level >= l ? 'done' : l === L.nextPerk ? 'next' : ''}"><span class="n">${l}</span><div>${LEVEL_PERKS[l].map((p) => `<span>${p}</span>`).join('')}</div>${s.level >= l ? '<em>Unlocked</em>' : ''}</div>`).join('');
       const advice = g.advice().map((a) => {
         const args = Object.entries(a.args || {}).map(([k, v]) => `data-${k}="${v}"`).join(' ');
         return `<div class="adv ${a.locked ? 'locked' : ''}">${ic(a.icon, 46, '', a.alt || '')}<div class="grow"><b>${esc(a.text)}</b><small>${esc(a.why || '')}</small></div><button class="btn sm ${a.locked ? 'ghost' : 'green'}" data-act="${a.act}" ${args}>${a.btn}</button></div>`;
       }).join('');
-      return `${head('ui_level', 'Your homestead', `${esc(s.user)} · ${g.owned().length} Chainers · cosiness ${g.cosy()}`, 'item_star')}
+      return `${head('ui_level', 'Your Homestead', `${esc(s.user)} · ${g.owned().length} Chainers · cosiness ${g.cosy()}`, 'item_star')}
         <div class="body"><div class="lvl-grid">
           <div>
             <div class="lvl-card"><div class="badge"><small>Level</small>${s.level}</div><div class="grow"><b>Homestead level ${s.level}</b><div class="bar green"><i style="width:${clamp(L.xp / L.need * 100, 0, 100)}%"></i></div><small>${fmt(L.xp)} / ${fmt(L.need)} XP · ${fmt(L.left)} to level ${s.level + 1}</small></div></div>
-            <h3>How you earn experience</h3>
+            <h3>How to earn XP</h3>
             <div class="xps">${XP_SOURCES.map(([i, t]) => `<span>${ic(i, 22)}${t}</span>`).join('')}</div>
-            <h3>What a level opens</h3>
+            <h3>Level unlocks</h3>
             <div class="track">${track}</div>
-            <p class="muted">Your level is separate from the level of each building. The Chainer Home needs Homestead level 2, 4, 6 and 8 for its upgrades; most other buildings need the Chainer Home itself to be high enough.</p>
+            <p class="muted">Homestead level and building levels are different things. Chainer Home upgrades need Homestead level 2, 4, 6 and 8. Most other buildings need a higher Chainer Home level.</p>
           </div>
           <div>
             <h3>What to do next</h3>
-            ${advice || '<p class="muted">All caught up.</p>'}
+            ${advice || '<p class="muted">Nothing to do right now.</p>'}
           </div>
         </div></div>`;
     },
@@ -215,11 +215,11 @@ export const PANELS = {
     render(ui, args) {
       const g = ui.game, d = BUILDINGS[args.type], chk = g.checkBuild(args.type);
       const what = args.type === 'pool_shrine'
-        ? 'The Reward Pool belongs to the whole world: every player uploads Crates into the same pool, and every 30 minutes it pays out ETH by share.'
-        : 'The Exchange is one market for all players: prices move with what everyone brings and takes.';
-      return `${head('item_globe', d.global, 'Shared by every player', 'item_eth')}
+        ? 'All players share one Reward Pool. Everyone uploads Crates to it. Every 30 minutes it pays ETH by share.'
+        : 'The Exchange is one market for all players. Prices change with what players trade.';
+      return `${head('item_globe', d.global, 'Shared by all players', 'item_eth')}
         <div class="body"><p>${what}</p>
-          <div class="sheet"><div class="row">${ic(d.icon, 64)}<div class="grow"><b style="color:var(--navy)">You reach it through your own ${d.name}</b><div class="muted">${d.desc}</div></div></div>
+          <div class="sheet"><div class="row">${ic(d.icon, 64)}<div class="grow"><b style="color:var(--navy)">Build your ${d.name} to unlock it</b><div class="muted">${d.desc}</div></div></div>
             <div class="row wrap" style="margin-top:10px;gap:8px 14px">${ui.costHtml(g.cost(args.type, 1))}${chk.ok ? '' : `<span class="req">${chk.why}</span>`}</div></div></div>
         <footer><button class="btn ${chk.ok ? 'green' : 'off'}" data-act="buildPick" data-type="${args.type}">${ic(d.icon, 24)}Build the ${d.name}</button></footer>`;
     },
@@ -233,7 +233,7 @@ export const PANELS = {
       if (!b || !(b.state === 'building' || b.state === 'upgrading')) return null;
       const list = g.s.chainers.filter((c) => g.isFree(c)).sort((x, y) => g.buildBonus(y) - g.buildBonus(x));
       const rows = list.map((c) => chainerCard(ui, c, { act: 'helpBuild', extra: `<span class="tag green">${Math.round(g.buildBonus(c) * 100)}% faster</span>` }).replace('data-id=', `data-b="${b.id}" data-id=`)).join('');
-      return `${head('item_hammer', 'Who helps build?', `${BUILDINGS[b.type].name} · ${fmtTime(b.doneAt - g.now())} left`)}<div class="body">${rows ? `<div class="grid two">${rows}</div>` : '<p>Nobody is free right now.</p>'}</div>`;
+      return `${head('item_hammer', 'Who helps build?', `${BUILDINGS[b.type].name} · ${fmtTime(b.doneAt - g.now())} left`)}<div class="body">${rows ? `<div class="grid two">${rows}</div>` : '<p>No one is free right now.</p>'}</div>`;
     },
   },
   sites: {
@@ -256,15 +256,15 @@ export const PANELS = {
       const camp = g.first('camp');
       let body = '';
       if (st.tab === 'mine') {
-        body = `<p class="muted">Your own Chainers live in the Home. Each eats Biopoints: total upkeep <b>${(g.upkeepPerMin() * 60).toFixed(0)}</b> / hour.</p><div class="grid two">${mine.map(c => chainerCard(ui, c)).join('')}</div>`;
+        body = `<p class="muted">Your Chainers live in the Chainer Home. Each eats Biopoints: total upkeep <b>${(g.upkeepPerMin() * 60).toFixed(0)}</b> / hour.</p><div class="grid two">${mine.map(c => chainerCard(ui, c)).join('')}</div>`;
       } else {
         const now = g.now();
         const tier = g.cosyTier();
         body = camp
-          ? `<p class="muted">Wanderers visit your Camp. Feed them and they work for you while they stay. Like one? Buy them with ETH from the Reward Pool. Cosiness <b>${g.cosy()}</b> (${tier.name}).</p>
+          ? `<p class="muted">Wanderers visit your Camp. Feed them and they work for you while they stay. Like one? Recruit them with ETH from the Reward Pool. Cosiness <b>${g.cosy()}</b> (${tier.name}).</p>
              ${guests.length ? `<div class="grid two">${guests.map(c => chainerCard(ui, c, { extra: `<span class="tag">${c.fed ? 'Stays' : 'Leaves in'} ${fmtTime(c.leavesAt - now)}</span>` })).join('')}</div>` : '<div class="sheet"><p>The camp is empty right now.</p></div>'}
-             <p class="muted" style="margin-top:10px">${guests.length < g.guestSlots() ? `Next Wanderer in about <b>${fmtTime(Math.max(0, g.s.guestTimer - now))}</b>.` : 'Camp is full — upgrade it for more beds.'}</p>`
-          : `<div class="sheet"><p>Build a <b>Wanderer Camp</b> and travelling Chainers will start to visit.</p><button class="btn" data-act="buildPick" data-type="camp">${ic('camp_1', 24)}Build Camp</button></div>`;
+             <p class="muted" style="margin-top:10px">${guests.length < g.guestSlots() ? `Next Wanderer in about <b>${fmtTime(Math.max(0, g.s.guestTimer - now))}</b>.` : 'Camp is full. Upgrade it for more beds.'}</p>`
+          : `<div class="sheet"><p>Build a <b>Wanderer Camp</b> and Wanderers will start to visit.</p><button class="btn" data-act="buildPick" data-type="camp">${ic('camp_1', 24)}Build Camp</button></div>`;
       }
       return `${head('ui_chainers', 'Chainers')}
         <div class="tabs"><button class="tab ${st.tab === 'mine' ? 'on' : ''}" data-act="tab" data-key="tab" data-val="mine">My Chainers ${mine.length}/${g.ownedSlots()}</button>
@@ -291,12 +291,12 @@ export const PANELS = {
       let acts = '';
       if (!c.owned) {
         const price = g.recruitPrice(c), fc = Math.round(g.feedCost(c) * (c.fed ? GUEST.extendCostMul : 1));
-        acts = `<button class="btn green" data-act="feed" data-id="${c.id}">${ic('res_bio', 22)}${c.fed ? 'Feed again' : 'Welcome meal'} <span class="sub">${fc}</span></button>
-          <button class="btn eth" data-act="recruit" data-id="${c.id}">${ic('item_eth', 22)}Buy <span class="sub">${fmtEth(price, 4)} ETH</span></button>
-          <button class="btn red sm" data-act="kick" data-id="${c.id}">Send away</button>`;
+        acts = `<button class="btn green" data-act="feed" data-id="${c.id}">${ic('res_bio', 22)}${c.fed ? 'Feed again' : 'Feed'} <span class="sub">${fc}</span></button>
+          <button class="btn eth" data-act="recruit" data-id="${c.id}">${ic('item_eth', 22)}Recruit <span class="sub">${fmtEth(price, 4)} ETH</span></button>
+          <button class="btn red sm" data-act="kick" data-id="${c.id}">Dismiss</button>`;
       } else {
-        acts = `${c.status === 'job' ? `<button class="btn ghost" data-act="unassign" data-id="${c.id}">Stop working</button>` : `<button class="btn" data-act="open" data-panel="jobs" data-id="${c.id}" ${g.isFree(c) ? '' : 'disabled'}>${ic('item_hammer', 22)}Give a job</button>`}
-          ${g.owned().length > 1 ? `<button class="btn red sm" data-act="kick" data-id="${c.id}">Release</button>` : ''}`;
+        acts = `${c.status === 'job' ? `<button class="btn ghost" data-act="unassign" data-id="${c.id}">Stop work</button>` : `<button class="btn" data-act="open" data-panel="jobs" data-id="${c.id}" ${g.isFree(c) ? '' : 'disabled'}>${ic('item_hammer', 22)}Assign job</button>`}
+          ${g.owned().length > 1 ? `<button class="btn red sm" data-act="kick" data-id="${c.id}">Dismiss</button>` : ''}`;
       }
       const wish = WISHES[c.wish];
       return `${head(null, esc(c.name), `${R.name} Chainer · level ${c.level}`)}
@@ -308,7 +308,7 @@ export const PANELS = {
               ${stats}
               ${canTrain ? `<div class="muted" style="margin-top:2px">Training +1 costs ${ui.costHtml(tc)}</div>` : c.owned && !arena ? '<div class="muted">Build a Training Ground to raise stats.</div>' : ''}
               <div class="sheet" style="margin-top:8px"><div class="row">${ic(T.icon, 30)}<div><b style="color:var(--navy)">${T.name}</b><div class="muted">${T.desc}</div></div></div></div>
-              ${!c.owned ? `<div class="sheet" style="margin-top:8px"><b style="color:var(--navy)">Wish:</b> ${esc(wish.text)} ${g.wishMet(c) ? `<span class="tag pink">${ic('item_heart', 14)}Granted: +20% stats, −15% price</span>` : '<span class="tag">Not yet</span>'}<div class="muted">${c.fed ? `Staying for ${fmtTime(c.leavesAt - g.now())}` : `Hungry — leaves in ${fmtTime(c.leavesAt - g.now())} unless fed`}</div></div>` : ''}
+              ${!c.owned ? `<div class="sheet" style="margin-top:8px"><b style="color:var(--navy)">Wish:</b> ${esc(wish.text)} ${g.wishMet(c) ? `<span class="tag pink">${ic('item_heart', 14)}Granted: +20% stats, −15% price</span>` : '<span class="tag">Not yet</span>'}<div class="muted">${c.fed ? `Staying for ${fmtTime(c.leavesAt - g.now())}` : `Hungry. Leaves in ${fmtTime(c.leavesAt - g.now())} unless fed`}</div></div>` : ''}
               <div class="muted" style="margin-top:8px">Best at: ${best.slice(0, 3).map(([a]) => `<span class="tag">${ic(ACTIVITIES[a].icon, 14)}${ACTIVITIES[a].name}</span>`).join(' ')}</div>
             </div>
           </div>
@@ -379,7 +379,7 @@ export const PANELS = {
           <div class="nm">${c.name}</div>
           <div class="row wrap" style="gap:5px"><span class="tag eth">${ic('item_eth', 14)}${c.points} pool points</span><span class="tag">${ic('item_hourglass', 14)}${fmtTime(g.crateTime(b, k))}</span></div>
           <div>${ui.costHtml({ res: c.cost }, { noTime: true })}</div>
-          ${locked ? `<div class="why">Needs Workshop level ${c.workshop}</div>` : `<button class="btn sm ${ok ? 'green' : 'off'}" data-act="craft" data-key="${k}">Assemble</button>`}
+          ${locked ? `<div class="why">Needs Workshop level ${c.workshop}</div>` : `<button class="btn sm ${ok ? 'green' : 'off'}" data-act="craft" data-key="${k}">Craft</button>`}
           <div class="muted">You have: <b>${g.s.crates[k]}</b></div>
         </div>`;
       }).join('');
@@ -387,9 +387,9 @@ export const PANELS = {
       const done = Object.entries(b.done || {}).filter(([, n]) => n > 0);
       return `${head('workshop', 'Crate Workshop', `Level ${b.level} · queue ${(b.jobs || []).length}/${BUILDINGS.workshop.queue[b.level - 1]}${b.worker ? ' · worker +' + Math.round(g.jobBonus(b) * 100) + '% speed' : ''}`)}
         <div class="body">
-          <p class="muted">Crates are how you earn. Assemble them from resources, then upload them into the Reward Pool for a share of the ETH.</p>
+          <p class="muted">Crates earn ETH. Craft them from resources, then upload them to the Reward Pool for a share of the ETH.</p>
           <div class="grid">${cards}</div>
-          <div class="sheet" style="margin-top:10px"><h3>In progress</h3>${jobs || '<span class="muted">Nothing on the bench.</span>'}
+          <div class="sheet" style="margin-top:10px"><h3>In progress</h3>${jobs || '<span class="muted">Queue is empty.</span>'}
           ${done.length ? `<div style="margin-top:8px"><button class="btn green sm" data-act="collect" data-id="${b.id}">Collect ${done.map(([k, n]) => `${ic(CRATES[k].icon, 18)}x${n}`).join(' ')}</button></div>` : ''}</div>
         </div>
         <footer><button class="btn ghost" data-act="open" data-panel="workers" data-id="${b.id}">${ic('ui_chainers', 22)}Worker</button><button class="btn eth" data-act="open" data-panel="pool">${ic('item_eth', 22)}Go to Reward Pool</button></footer>`;
@@ -418,17 +418,17 @@ export const PANELS = {
               <div class="kv"><span>Your points</span><b>${fmt(P.mine)}</b><span>All players</span><b>${fmt(P.total)}</b><span>Your share now</span><b>${(P.share * 100).toFixed(2)}%</b>
               <span>Estimated payout</span><b class="eth-num">${fmtEth(P.projected, 6)} ETH</b><span>Your rank</span><b>${P.mine ? '#' + P.rank : '—'} of ${P.board.length}</b></div>
               <div class="bar eth" style="margin-top:8px;height:12px"><i style="width:${clamp(P.share * 100, 0, 100)}%"></i></div>
-              <div class="muted" style="margin-top:6px">1 ETH is shared every day, in ${Math.round(86400 / POOL.epochSec)} rounds of 30 minutes. Your slice equals your share of the points uploaded in that round${g.poolBonus() ? ` (your shrine adds +${Math.round(g.poolBonus() * 100)}% points)` : ''}.</div>
+              <div class="muted" style="margin-top:6px">1 ETH is shared every day, in ${Math.round(86400 / POOL.epochSec)} rounds of 30 minutes. You get ETH by your share of the points uploaded in that round${g.poolBonus() ? ` (your Pool Shrine adds +${Math.round(g.poolBonus() * 100)}% points)` : ''}.</div>
             </div></div>
-          <h3>Upload crates</h3>${dep}
-          ${s.crates.crate1 + s.crates.crate2 + s.crates.crate3 === 0 ? `<button class="btn" data-act="open" data-panel="workshop">${ic('workshop', 22)}Assemble crates</button>` : ''}`;
+          <h3>Upload Crates</h3>${dep}
+          ${s.crates.crate1 + s.crates.crate2 + s.crates.crate3 === 0 ? `<button class="btn" data-act="open" data-panel="workshop">${ic('workshop', 22)}Craft Crates</button>` : ''}`;
       } else if (st.tab === 'board') {
         body = P.board.slice(0, 30).map((b, i) => `<div class="line ${b.me ? 'me' : ''}"><div class="rk">${i + 1}</div><div class="grow"><b style="color:var(--navy)">${esc(b.name)}</b>${b.me ? ' <span class="tag gold">You</span>' : ''}</div><b>${fmt(b.points)}</b><span class="muted" style="width:60px;text-align:right">${P.total ? (b.points / P.total * 100).toFixed(1) : 0}%</span></div>`).join('');
       } else {
-        body = (s.pool.history.length ? s.pool.history.map(h => `<div class="line">${ic('item_eth', 30)}<div class="grow"><b class="eth-num">+${fmtEth(h.eth, 6)} ETH</b><div class="muted">${fmt(h.points)} of ${fmt(h.total)} points · ${(h.points / h.total * 100).toFixed(1)}%</div></div><span class="muted">${fmtTime(g.now() - h.at)} ago</span></div>`).join('') : '<div class="sheet"><p>No payouts yet. Upload a crate and wait for the round to close.</p></div>')
-          + `<p class="muted" style="margin-top:8px">Total earned: <b class="eth-num">${fmtEth(s.pool.earned, 6)} ETH</b> · lifetime points: <b>${fmt(s.pool.lifetime)}</b></p>`;
+        body = (s.pool.history.length ? s.pool.history.map(h => `<div class="line">${ic('item_eth', 30)}<div class="grow"><b class="eth-num">+${fmtEth(h.eth, 6)} ETH</b><div class="muted">${fmt(h.points)} of ${fmt(h.total)} points · ${(h.points / h.total * 100).toFixed(1)}%</div></div><span class="muted">${fmtTime(g.now() - h.at)} ago</span></div>`).join('') : '<div class="sheet"><p>No payouts yet. Upload a Crate and wait for the round to end.</p></div>')
+          + `<p class="muted" style="margin-top:8px">Total earned: <b class="eth-num">${fmtEth(s.pool.earned, 6)} ETH</b> · all-time points: <b>${fmt(s.pool.lifetime)}</b></p>`;
       }
-      return `${head('item_eth', 'World Reward Pool', `${ic('item_globe', 16, '', 'item_star')} Shared by every player · your balance ${fmtEth(s.eth, 6)} ETH`)}
+      return `${head('item_eth', 'World Reward Pool', `${ic('item_globe', 16, '', 'item_star')} Shared by all players · your balance ${fmtEth(s.eth, 6)} ETH`)}
         <div class="tabs">${[['now', 'This round'], ['board', 'Leaderboard'], ['hist', 'My payouts']].map(([k, n]) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-act="tab" data-key="tab" data-val="${k}">${n}</button>`).join('')}</div>
         <div class="body">${body}</div>`;
     },
@@ -454,7 +454,7 @@ export const PANELS = {
       const fy = (60 - (fair - mn) / (mx - mn || 1) * 56).toFixed(1);
       const depth = EXCHANGE.assets.map((k) => {
         const r = x.reserves[k] / x.base[k];
-        return `<div class="row" style="gap:6px;margin:3px 0">${ic(RES[k].icon, 20)}<div class="bar ${r > 1.05 ? 'green' : r < 0.95 ? 'pink' : ''}" style="flex:1"><i style="width:${clamp(r * 50, 3, 100)}%"></i></div><span class="muted" style="width:92px;text-align:right">${r > 1.05 ? 'plenty · cheap' : r < 0.95 ? 'scarce · pricey' : 'balanced'}</span></div>`;
+        return `<div class="row" style="gap:6px;margin:3px 0">${ic(RES[k].icon, 20)}<div class="bar ${r > 1.05 ? 'green' : r < 0.95 ? 'pink' : ''}" style="flex:1"><i style="width:${clamp(r * 50, 3, 100)}%"></i></div><span class="muted" style="width:92px;text-align:right">${r > 1.05 ? 'a lot · cheap' : r < 0.95 ? 'low · expensive' : 'normal'}</span></div>`;
       }).join('');
       return `${head('item_scales', 'World Exchange', `${ic('item_globe', 16, '', 'item_star')} One market for all players · your Trading Post fee ${(q.fee * 100).toFixed(0)}%`)}
         <div class="body">
@@ -470,7 +470,7 @@ export const PANELS = {
                 <div class="row" style="justify-content:center;gap:10px">${ic(RES[st.from].icon, 44)}<b class="big-num" id="ex-in">${fmt(st.amt)}</b><span style="font-size:24px;font-weight:900;color:var(--gold)">→</span>${ic(RES[st.to].icon, 44)}<b class="big-num up" id="ex-out">${fmt(q.out)}</b></div>
                 <div class="kv" style="margin-top:10px;text-align:left" id="ex-kv">
                   <span>Rate</span><b>1 ${RES[st.from].name} = ${spot.toFixed(spot < 0.1 ? 3 : 2)} ${RES[st.to].name}</b>
-                  <span>vs. usual</span><b class="${vsFair >= 0 ? 'up' : ''}" style="${vsFair < 0 ? 'color:var(--red)' : ''}">${vsFair >= 0 ? '▲ +' : '▼ '}${vsFair.toFixed(0)}% ${vsFair >= 3 ? 'good deal' : vsFair <= -3 ? 'poor deal' : ''}</b>
+                  <span>vs. usual</span><b class="${vsFair >= 0 ? 'up' : ''}" style="${vsFair < 0 ? 'color:var(--red)' : ''}">${vsFair >= 0 ? '▲ +' : '▼ '}${vsFair.toFixed(0)}% ${vsFair >= 3 ? 'good deal' : vsFair <= -3 ? 'bad deal' : ''}</b>
                   <span>Price impact</span><b>${(q.impact * 100).toFixed(1)}%</b>
                 </div>
                 <svg class="spark" viewBox="0 0 300 64" preserveAspectRatio="none"><line x1="0" x2="300" y1="${fy}" y2="${fy}" stroke="#c9b98a" stroke-dasharray="4 4"/><polyline points="${pts}" fill="none" stroke="#4b57c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
@@ -479,7 +479,7 @@ export const PANELS = {
               <button class="btn green wide" style="margin-top:10px" data-act="swap" ${st.amt > 0 && q.out > 0 ? '' : 'disabled'}>${ic('item_scales', 24)}Swap</button>
             </div>
           </div>
-          <h3 style="margin-top:12px">Pool depth</h3><p class="muted">The more of a resource sits in the pool, the cheaper it is. Other traders move prices all the time.</p>${depth}
+          <h3 style="margin-top:12px">Market stock</h3><p class="muted">The more of a resource is in the market, the cheaper it is. Other players change prices all the time.</p>${depth}
         </div>`;
     },
   },
@@ -489,9 +489,9 @@ export const PANELS = {
     cls: 'narrow',
     render(ui) {
       const g = ui.game, c = g.landCost();
-      if (!c) return `${head('item_flag', 'Land')}<div class="body"><p>Your island is fully explored. Nothing left to unlock!</p></div>`;
+      if (!c) return `${head('item_flag', 'Land')}<div class="body"><p>Your land is at max size. Nothing left to unlock.</p></div>`;
       return `${head('item_flag', 'Expand your land', `Expansion ${g.s.land + 1} of ${LAND.rings.length}`)}
-        <div class="body"><p>Push the border out by one tile on every side: more room to build, and new trees and rocks to clear.</p><div>${ui.costHtml(c, { noTime: true })}</div></div>
+        <div class="body"><p>Adds one tile on every side: more room to build, and new trees and rocks to clear.</p><div>${ui.costHtml(c, { noTime: true })}</div></div>
         <footer><button class="btn green ${g.canAfford(c) ? '' : 'off'}" data-act="expand">Expand</button></footer>`;
     },
   },
@@ -507,12 +507,12 @@ export const PANELS = {
           <h3>Sound</h3>
           <div class="row wrap" style="margin-bottom:12px"><button class="btn sm ${s.settings.sfx ? 'navy' : 'ghost'}" data-act="sound">${s.settings.sfx ? 'Sound on' : 'Sound off'}</button><button class="btn sm ${s.settings.music === false ? 'ghost' : 'navy'}" data-act="music">${s.settings.music === false ? 'Music off' : 'Music on'}</button><button class="btn sm ${s.settings.amb === false ? 'ghost' : 'navy'}" data-act="amb">${s.settings.amb === false ? 'Ambience off' : 'Ambience on'}</button></div>
           <h3>Help</h3>
-          <div class="row wrap" style="margin-bottom:12px"><button class="btn sm ghost" data-act="howto">How the game works</button><button class="btn sm ghost" data-act="tour">Show me around</button><button class="btn sm ghost" data-act="open" data-panel="level">What to do next</button></div>
+          <div class="row wrap" style="margin-bottom:12px"><button class="btn sm ghost" data-act="howto">How to play</button><button class="btn sm ghost" data-act="tour">Replay tour</button><button class="btn sm ghost" data-act="open" data-panel="level">What to do next</button></div>
           <h3>Game speed (for testing)</h3>
           <div class="row wrap">${[1, 5, 20, 60].map(v => `<button class="btn sm ${s.settings.speed === v ? 'navy' : 'ghost'}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
-          <p class="muted" style="margin-top:6px">Real pacing is ×1 (the pool pays every 30 minutes). Faster speeds make every timer, including the pool, run quicker.</p>
+          <p class="muted" style="margin-top:6px">Normal speed is ×1 (the Reward Pool pays every 30 minutes). Higher speeds make every timer faster, including the pool.</p>
           <h3 style="margin-top:12px">Account</h3>
-          <p class="muted">Mock login: progress is saved in this browser under this name.</p>
+          <p class="muted">Test login. Progress is saved in this browser under this name.</p>
           <div class="row wrap"><button class="btn ghost sm" data-act="logout">Switch player</button><button class="btn red sm" data-act="reset">Reset progress</button></div>
         </div>`;
     },
@@ -528,7 +528,7 @@ export const PANELS = {
     const R = RARITY[c.rarity], T = TRAITS[c.trait], free = g.isFree(c), now = g.now();
     const stats = STAT_KEYS.map((k) => `<div class="sb ${STATS[k].main ? 'main' : ''}" title="${STATS[k].name}: ${STATS[k].desc}">${ic(STATS[k].icon, 18)}<small>${STATS[k].short}</small><div class="bar ${STATS[k].main ? 'blue' : ''}"><i style="width:${g.stat(c, k) / 15 * 100}%"></i></div><b>${g.stat(c, k)}</b></div>`).join('');
     const act = (a, icon, label, on = true, why = '', cls = '', extra = '', alt = '') => `<button class="abtn ${cls} ${on ? '' : 'off'}" data-act="${a}" data-id="${c.id}" ${extra} ${on ? '' : `data-why="${why}"`} title="${why}"><span class="pic">${ic(icon, 40, '', alt)}</span><b>${label}</b>${why && !on ? `<small>${why}</small>` : ''}</button>`;
-    const busy = free ? '' : 'Busy right now';
+    const busy = free ? '' : 'Busy';
     let acts = '';
     const canWork = g.canWork(c);
     if (c.owned || c.fed) {
@@ -541,12 +541,12 @@ export const PANELS = {
     }
     if (!c.owned) {
       const price = g.recruitPrice(c), fc = Math.round(g.feedCost(c) * (c.fed ? GUEST.extendCostMul : 1));
-      acts = act('feed', 'item_food_bowl', c.fed ? 'Feed again' : 'Welcome meal', g.s.res.bio >= fc, 'Not enough Biopoints', 'feed', '', '') .replace('</b>', `</b><em>${ic('res_bio', 16)}${fc}</em>`)
-        + act('recruit', 'item_eth', 'Recruit', g.s.eth + 1e-12 >= price, 'ETH comes only from the Reward Pool', 'eth').replace('</b>', `</b><em>${fmtEth(price, 4)} ETH</em>`)
+      acts = act('feed', 'item_food_bowl', c.fed ? 'Feed again' : 'Feed', g.s.res.bio >= fc, 'Not enough Biopoints', 'feed', '', '') .replace('</b>', `</b><em>${ic('res_bio', 16)}${fc}</em>`)
+        + act('recruit', 'item_eth', 'Recruit', g.s.eth + 1e-12 >= price, 'Earn ETH from the Reward Pool', 'eth').replace('</b>', `</b><em>${fmtEth(price, 4)} ETH</em>`)
         + acts;
     }
     acts += act('cDetails', 'item_book', 'Details', true, '', 'quiet');
-    if (!c.owned) acts += act('kick', 'item_flag', 'Send away', c.status !== 'expedition' && c.status !== 'clearing', 'Wait until they are back', 'quiet red');
+    if (!c.owned) acts += act('kick', 'item_flag', 'Dismiss', c.status !== 'expedition' && c.status !== 'clearing', 'Wait until they are back', 'quiet red');
     const wish = WISHES[c.wish];
     const sub = c.owned
       ? `<span class="tag navy">Your Chainer</span><span class="tag">Lv ${c.level}</span><span class="tag" style="box-shadow:inset 0 0 0 2px ${R.color}">${R.name}</span>`
@@ -555,9 +555,9 @@ export const PANELS = {
       <div class="chd">${ui.face(c)}<div class="grow"><div class="nm"><b>${esc(c.name)}</b>${ui.stars(c)}</div><div class="row wrap" style="gap:5px">${sub}</div>
         <div class="state">${esc(ui.statusOf(c))}</div></div>
         <div class="sbs">${stats}</div></div>
-      <div class="trait">${ic(T.icon, 22)}<b>${T.name}</b><span>${T.desc}</span>${!c.owned ? `<span class="wish">${ic('item_heart', 18)}Wishes for ${esc(wish.text)}${g.wishMet(c) ? ' · granted: 15% cheaper' : ''}</span>` : ''}</div>
+      <div class="trait">${ic(T.icon, 22)}<b>${T.name}</b><span>${T.desc}</span>${!c.owned ? `<span class="wish">${ic('item_heart', 18)}Wish: ${esc(wish.text)}${g.wishMet(c) ? ' · granted: 15% cheaper' : ''}</span>` : ''}</div>
       <div class="abtns">${acts}</div>
-      ${!c.owned ? '<p class="note">Only ETH from the Reward Pool can buy a Chainer.</p>' : ''}`;
+      ${!c.owned ? '<p class="note">Recruiting costs ETH from the Reward Pool.</p>' : ''}`;
   },
   ctxBuilding(ui, sel) {
     const g = ui.game, b = g.building(sel.id);
@@ -570,24 +570,24 @@ export const PANELS = {
     if (building) {
       const h = b.builder ? g.chainer(b.builder) : null;
       info = `<span class="tag gold">${b.state === 'building' ? 'Building' : 'Upgrading'} · ${fmtTime(b.doneAt - now)}</span>${h ? `<span class="tag green">${esc(h.name)} is helping: ${Math.round(((b.builderK || 1) - 1) * 100)}% faster</span>` : ''}`;
-      acts += h ? `<button class="btn sm ghost" data-act="unassign" data-id="${h.id}">Send ${esc(h.name)} away</button>` : `<button class="btn sm green" data-act="open" data-panel="helpers" data-id="${b.id}">${ic('item_hammer', 20)}Send a Chainer to help</button>`;
+      acts += h ? `<button class="btn sm ghost" data-act="unassign" data-id="${h.id}">Stop helping</button>` : `<button class="btn sm green" data-act="open" data-panel="helpers" data-id="${b.id}">${ic('item_hammer', 20)}Add a helper</button>`;
     } else {
       switch (b.type) {
         case 'home': info = `<span class="tag navy">Beds ${g.owned().length}/${g.ownedSlots()}</span><span class="tag">Builders ${g.builderSlots()}</span>`; acts += `<button class="btn sm" data-act="open" data-panel="roster">Chainers</button>`; break;
         case 'camp':
-          info = `<span class="tag navy">Wanderers ${g.guests().length}/${g.guestSlots()}</span>${g.hasUpg('kitchen') ? `<button class="tag ${g.autoOn('kitchen') ? 'green' : ''}" data-act="open" data-panel="supply">${ic('res_bio', 14)}Larder ${Math.floor(g.s.larder)} / ${Math.min(g.s.auto.kitchen.stock, g.larderCap())}</button>` : `<button class="tag" data-act="open" data-panel="supply">Feed them automatically: Camp Kitchen</button>`}`;
+          info = `<span class="tag navy">Wanderers ${g.guests().length}/${g.guestSlots()}</span>${g.hasUpg('kitchen') ? `<button class="tag ${g.autoOn('kitchen') ? 'green' : ''}" data-act="open" data-panel="supply">${ic('res_bio', 14)}Kitchen ${Math.floor(g.s.larder)} / ${Math.min(g.s.auto.kitchen.stock, g.larderCap())}</button>` : `<button class="tag" data-act="open" data-panel="supply">Auto-feed: unlock the Camp Kitchen</button>`}`;
           acts += `<button class="btn sm" data-act="open" data-panel="roster" data-tab="guests">Wanderers</button>`; break;
         case 'farm_plot':
-          info = (b.crop ? `<span class="tag green">${CROPS[b.crop].name} · ${now >= b.readyAt ? 'Ready!' : fmtTime(b.readyAt - now)}</span><span class="tag">${ic('res_bio', 14)}+${g.farmYield(b)}</span>` : '<span class="tag">Empty</span>') + auto('seeddrill', 'Replants') + auto('baskets', 'Harvests itself');
+          info = (b.crop ? `<span class="tag green">${CROPS[b.crop].name} · ${now >= b.readyAt ? 'Ready' : fmtTime(b.readyAt - now)}</span><span class="tag">${ic('res_bio', 14)}+${g.farmYield(b)}</span>` : '<span class="tag">Empty</span>') + auto('seeddrill', 'Auto-plant') + auto('baskets', 'Auto-harvest');
           acts += b.crop ? (now >= b.readyAt ? `<button class="btn sm green" data-act="marker" data-m="harvest" data-id="${b.id}">Harvest</button>` : '') : `<button class="btn sm green" data-act="open" data-panel="crops" data-id="${b.id}">Plant</button>`;
           if (!g.hasUpg('seeddrill')) acts += `<button class="btn sm ghost" data-act="open" data-panel="supply">Automate</button>`;
           break;
         case 'warehouse': info = `<span class="tag navy">Storage ×${(1 + g.byType('warehouse').reduce((a, x) => a + BUILDINGS.warehouse.capMul[x.level - 1], 0)).toFixed(1)}</span>`; break;
         case 'granary': info = `<span class="tag navy">Biopoints cap ${fmt(g.capOf('bio'))}</span>`; break;
-        case 'workshop': info = auto('crateline', 'Crate Line'); acts += `<button class="btn sm green" data-act="open" data-panel="workshop">Assemble crates</button>`; break;
-        case 'pool_shrine': info = `<span class="tag eth">${ic('item_globe', 14, '', 'item_star')}World pool pays in ${fmtClock(g.epochLeft())}</span>${g.poolBonus() ? `<span class="tag">+${Math.round(g.poolBonus() * 100)}% points</span>` : ''}${auto('courier', 'Courier')}`; acts += `<button class="btn sm eth" data-act="open" data-panel="pool">Open the Reward Pool</button>`; break;
+        case 'workshop': info = auto('crateline', 'Crate Line'); acts += `<button class="btn sm green" data-act="open" data-panel="workshop">Craft Crates</button>`; break;
+        case 'pool_shrine': info = `<span class="tag eth">${ic('item_globe', 14, '', 'item_star')}Reward Pool pays in ${fmtClock(g.epochLeft())}</span>${g.poolBonus() ? `<span class="tag">+${Math.round(g.poolBonus() * 100)}% points</span>` : ''}${auto('courier', 'Courier')}`; acts += `<button class="btn sm eth" data-act="open" data-panel="pool">Go to Reward Pool</button>`; break;
         case 'exchange': info = `<span class="tag navy">${ic('item_globe', 14, '', 'item_star')}World Exchange · fee ${(g.exFee() * 100).toFixed(0)}%</span>`; acts += `<button class="btn sm green" data-act="open" data-panel="exchange">Trade</button>`; break;
-        case 'balloon_dock': info = `<span class="tag navy">Parties ${g.s.expeditions.length}/${g.parallelMax()}</span><span class="tag">Zones ${BUILDINGS.balloon_dock.regions[b.level - 1]}/4</span><span class="tag">${Object.keys(TRANSPORT).filter((k) => g.transportOpen(k)).map((k) => TRANSPORT[k].name).join(', ')}</span>`; main = `<button class="btn green big wide" data-act="expeditions">${ic('ui_expeditions', 34, '', 'item_compass')}Open the Frontier map<span class="sub">send a party for loot and resources</span></button>`; break;
+        case 'balloon_dock': info = `<span class="tag navy">Squads ${g.s.expeditions.length}/${g.parallelMax()}</span><span class="tag">Zones ${BUILDINGS.balloon_dock.regions[b.level - 1]}/4</span><span class="tag">${Object.keys(TRANSPORT).filter((k) => g.transportOpen(k)).map((k) => TRANSPORT[k].name).join(', ')}</span>`; main = `<button class="btn green big wide" data-act="expeditions">${ic('ui_expeditions', 34, '', 'item_compass')}Go to Frontier<span class="sub">send a squad for loot and resources</span></button>`; break;
         case 'rest_lodge': info = `<span class="tag navy">Rest −${Math.round(BUILDINGS.rest_lodge.rest[b.level - 1] * 100)}%</span>`; break;
         case 'arena': info = `<span class="tag navy">Training cap +${BUILDINGS.arena.trainCap[b.level - 1]}</span>`; acts += `<button class="btn sm" data-act="open" data-panel="roster">Train a Chainer</button>`; break;
         default: break;
@@ -609,8 +609,8 @@ export const PANELS = {
       // ONE obvious button. It says what you get, what it costs, and when it is locked exactly what is missing
       const miss = chk.cost && !g.canAfford(chk.cost) ? g.missing(chk.cost)[0] : null;
       const need = miss ? (miss === 'eth' ? 'Needs ETH from the Reward Pool' : `Need ${fmt(Math.ceil(chk.cost.res[miss] - (g.s.res[miss] || 0)))} more ${resName(miss)}`) : '';
-      const how = chk.ok ? '' : chk.level ? `<div class="req">${ic('item_lock', 18)}<span>You are Homestead level ${g.s.level}.</span><button class="btn sm ghost" data-act="open" data-panel="level">How do I level up?</button></div>`
-        : chk.home ? `<div class="req">${ic('item_lock', 18)}<span>Your Chainer Home is level ${g.homeLevel()}.</span><button class="btn sm ghost" data-act="hint" data-hint="home">Show the Home</button></div>`
+      const how = chk.ok ? '' : chk.level ? `<div class="req">${ic('item_lock', 18)}<span>You are Homestead level ${g.s.level}.</span><button class="btn sm ghost" data-act="open" data-panel="level">How to level up</button></div>`
+        : chk.home ? `<div class="req">${ic('item_lock', 18)}<span>Your Chainer Home is level ${g.homeLevel()}.</span><button class="btn sm ghost" data-act="hint" data-hint="home">Go to Home</button></div>`
           : need ? '' : `<div class="req"><span>${chk.why}</span></div>`;
       up = `<div class="upg ${chk.ok ? 'ok' : ''}">
         <div class="gain">${ic('item_arrow_up', 22, '', 'item_star')}<span>Level ${b.level + 1} gives you <b>${g.upgradeGain(b)}</b></span></div>
@@ -641,7 +641,7 @@ export const ACTIONS = {
     if (ui.game.setSeason(d.id)) { ui.seasonBanner(d.id); ui.sfx.play('season'); }
     ui._hudDirty = true;
   },
-  sound(ui) { const s = ui.game.s.settings; s.sfx = !s.sfx; ui.sfx.on = s.sfx; ui.game.save(); ui._hudDirty = true; ui.refreshModal(); ui.toast(s.sfx ? 'Sound on' : 'Sound off. The game is silent', '', s.sfx ? 'ui_sound_on' : 'ui_sound_off'); },
+  sound(ui) { const s = ui.game.s.settings; s.sfx = !s.sfx; ui.sfx.on = s.sfx; ui.game.save(); ui._hudDirty = true; ui.refreshModal(); ui.toast(s.sfx ? 'Sound on' : 'Sound off', '', s.sfx ? 'ui_sound_on' : 'ui_sound_off'); },
   howto(ui) { ui.closeModal(); ui.howto(); },
   howNext(ui) { ui.howStep(1); }, howBack(ui) { ui.howStep(-1); }, howSkip(ui) { ui.howStep(99); },
   speed(ui, d) { ui.game.s.settings.speed = +d.v; ui.refreshModal(); ui.toast(`Game speed ×${d.v}`); },
@@ -654,7 +654,7 @@ export const ACTIONS = {
     if (!q) return;
     if (g.questProgress(q).done) {
       const r = g.claimQuest();
-      if (r.ok) { if (ui.modal) ui.closeModal(); ui.celebrate({ title: 'Goal complete!', hero: 'item_trophy', text: q.text, loot: r.got, sfx: 'fanfare' }); }
+      if (r.ok) { if (ui.modal) ui.closeModal(); ui.celebrate({ title: 'Quest complete!', hero: 'item_trophy', text: q.text, loot: r.got, sfx: 'fanfare', button: 'Claim' }); }
     } else ACTIONS.hint(ui, { hint: q.hint });
   },
   hint(ui, d) {
@@ -672,7 +672,7 @@ export const ACTIONS = {
     else if (h === 'pool') ui.open('pool');
     else if (h === 'land') ui.open('land');
     else if (h === 'home') { const b = g.first('home'); ui.home.focusBuilding(b, 46); ui.openCtx('building', b.id); }
-    else if (h === 'clear') ui.toast('Tap any tree, rock or bush inside your land', '', 'item_axe');
+    else if (h === 'clear') ui.toast('Tap a tree, rock or bush on your land', '', 'item_axe');
   },
 
   // ---- markers in the world -------------------------------------------------------------------
@@ -707,7 +707,7 @@ export const ACTIONS = {
     ui.beginPlacement(d.type, null);
   },
   moveB(ui, d) { const b = ui.game.building(d.id); if (!b) return; ui.closeCtx(); ui.beginPlacement(b.type, b.id); },
-  removeB(ui, d) { const b = ui.game.building(d.id); if (b && confirm(`Remove ${BUILDINGS[b.type].name}? Half the cost is refunded.`)) { ui.game.demolish(d.id); ui.closeCtx(); } },
+  removeB(ui, d) { const b = ui.game.building(d.id); if (b && confirm(`Remove ${BUILDINGS[b.type].name}? You get half the cost back.`)) { ui.game.demolish(d.id); ui.closeCtx(); } },
   placeConfirm(ui) {
     const type = ui.home.place && ui.home.place.type, moving = ui.home.place && ui.home.place.moveId;
     const r = ui.home.confirmPlace();
@@ -718,13 +718,13 @@ export const ACTIONS = {
   placeCancel(ui) { ui.home.cancelPlace(); ui.endPlacement(); },
   placeRotate(ui) { ui.home.rotatePlace(); },
   upgrade(ui, d) { const r = ui.game.upgrade(d.id); if (!r.ok) ui.fail(r); else { ui.sfx.play('place'); ui.renderCtx(); } },
-  expand(ui) { const r = ui.game.expandLand(); if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.celebrate({ title: 'New land!', hero: 'item_flag', text: 'Your border moved out. Fresh trees and rocks to clear!', sfx: 'fanfare' }); } },
+  expand(ui) { const r = ui.game.expandLand(); if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.celebrate({ title: 'New land!', hero: 'item_flag', text: 'Your land is bigger. New trees and rocks to clear.', sfx: 'fanfare' }); } },
 
   // ---- farm / production ------------------------------------------------------------------------
   plant(ui, d) { const r = ui.game.plant(d.id, d.crop); if (!r.ok) ui.fail(r); else ui.closeModal(); },
   enqueue(ui, d) { const r = ui.game.enqueue(d.id, +d.n); if (!r.ok) ui.fail(r); else { ui.sfx.play('place'); ui.home.bounce(d.id); } ui.renderCtx(); },
   collect(ui, d) { ACTIONS.marker(ui, { m: 'collect', id: d.id }); },
-  craft(ui, d) { const r = ui.game.craftCrate(d.key); if (!r.ok) ui.fail(r); else { ui.sfx.play('place'); ui.toast(`${CRATES[d.key].name} on the bench`, 'good', CRATES[d.key].icon); } refresh(ui); },
+  craft(ui, d) { const r = ui.game.craftCrate(d.key); if (!r.ok) ui.fail(r); else { ui.sfx.play('place'); ui.toast(`Crafting: ${CRATES[d.key].name}`, 'good', CRATES[d.key].icon); } refresh(ui); },
   deposit(ui, d) { const r = ui.game.deposit(d.key, +d.n); if (!r.ok) ui.fail(r); refresh(ui); },
 
   // ---- chainers ---------------------------------------------------------------------------------
@@ -733,15 +733,15 @@ export const ACTIONS = {
     const g = ui.game, c = g.chainer(d.id), r = g.recruit(d.id);
     if (!r.ok) { ui.fail(r); return; }
     ui.closeModal(); ui.closeCtx();
-    ui.celebrate({ title: `${c.name} joined!`, hero: 'x', heroImg: ui.studio.portrait(c, 'full'), text: `A ${RARITY[c.rarity].name} Chainer now calls your homestead home.`, sfx: 'fanfare' });
+    ui.celebrate({ title: `${c.name} joined!`, hero: 'x', heroImg: ui.studio.portrait(c, 'full'), text: `New ${RARITY[c.rarity].name} Chainer. Yours forever.`, sfx: 'fanfare' });
   },
   kick(ui, d) {
     const g = ui.game, c = g.chainer(d.id);
-    if (!c || !confirm(`Send ${c.name} away? Your cosiness drops by ${GRUDGE.kick}.`)) return;
+    if (!c || !confirm(`Dismiss ${c.name}? Your cosiness drops by ${GRUDGE.kick}.`)) return;
     const r = g.release(d.id);
     if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.closeCtx(); }
   },
-  assign(ui, d) { const r = ui.game.assign(d.id, d.b); if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.sfx.play('order'); ui.toast('Off to work!', 'good', 'item_hammer'); refresh(ui); } },
+  assign(ui, d) { const r = ui.game.assign(d.id, d.b); if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.sfx.play('order'); ui.toast('Job assigned', 'good', 'item_hammer'); refresh(ui); } },
   assign2(ui, d) { const r = ui.game.assign(d.id, d.b); if (!r.ok) ui.fail(r); else { ui.closeModal(); ui.openCtx('building', d.b); } },
   unassign(ui, d) { ui.game.unassign(d.id); refresh(ui); if (ui.modal && (ui.modal.name === 'workers')) ui.closeModal(); },
   train(ui, d) { const r = ui.game.train(d.id, d.stat); if (!r.ok) ui.fail(r); else ui.toast('Training started', 'good', STATS[d.stat].icon); refresh(ui); },
@@ -769,14 +769,14 @@ export const ACTIONS = {
 
   // ---- the frontier ------------------------------------------------------------------------------
   expeditions(ui) {
-    if (!ui.game.lodge()) { ui.toast('Build the Expedition Lodge first. Parties set off from it', 'bad', 'item_compass'); ui.open('build', { cat: 'core' }); return; }
+    if (!ui.game.lodge()) { ui.toast('Build the Expedition Lodge first. It sends squads to the Frontier', 'bad', 'item_compass'); ui.open('build', { cat: 'core' }); return; }
     ui.enterFrontier();
   },
   frontier(ui) { ACTIONS.expeditions(ui); },
   goHome(ui) { ui.exitFrontier(); },
   zone(ui, d) {
     const reg = REGIONS.find(r => r.id === d.id);
-    if (!ui.game.regionOpen(reg)) ui.toast(`${reg.name} opens when your Expedition Lodge reaches level ${reg.dock}`, 'bad', 'item_lock');
+    if (!ui.game.regionOpen(reg)) ui.toast(`${reg.name} is locked. Upgrade the Expedition Lodge to level ${reg.dock}`, 'bad', 'item_lock');
     ui.frontier.focusZone(d.id);
   },
   planOpen(ui, d) { ui.openPlan(d.id); },
@@ -788,7 +788,7 @@ export const ACTIONS = {
     if (i >= 0) st.team.splice(i, 1);
     else {
       if (!g.isFree(c)) { ui.toast(`${c.name} is busy: ${ui.statusOf(c).toLowerCase()}`, 'bad'); return; }
-      if (st.team.length >= POI_TYPES[poi.type].team) { ui.toast('The party is full. Tap someone to swap them out', 'bad'); return; }
+      if (st.team.length >= POI_TYPES[poi.type].team) { ui.toast('Squad is full. Tap a member to remove them', 'bad'); return; }
       st.team.push(d.id);
     }
     ui.renderSide();
@@ -797,7 +797,7 @@ export const ACTIONS = {
   planSet(ui, d) {
     const st = ui.plan;
     if (!st) return;
-    if (d.key === 'transport' && !ui.game.transportOpen(d.val)) { ui.toast(`The ${TRANSPORT[d.val].name} comes with Expedition Lodge level ${TRANSPORT[d.val].lodge}`, 'bad', 'item_lock'); return; }
+    if (d.key === 'transport' && !ui.game.transportOpen(d.val)) { ui.toast(`${TRANSPORT[d.val].name} unlocks at Expedition Lodge level ${TRANSPORT[d.val].lodge}`, 'bad', 'item_lock'); return; }
     st[d.key] = d.val;
     ui.renderSide();
   },
@@ -808,16 +808,16 @@ export const ACTIONS = {
     if (!r.ok) { ui.fail(r); return; }
     ui.plan = null; ui.partyId = r.exp.id;
     ui.renderSide();
-    ui.toast('The party is off. You can watch them on the map', 'good', 'item_compass');
+    ui.toast('Squad sent. Watch them on the map', 'good', 'item_compass');
     ui.frontier.focusParty(r.exp.id, 44);
   },
   partyOpen(ui, d) { ui.openParty(d.id); },
   partyClose(ui) { ui.partyId = null; ui.renderSide(); ui.sfx.play('close'); },
   partyShow(ui, d) { ui.frontier.focusParty(d.id, 36); },
   partyRecall(ui, d) {
-    if (!confirm('Call the party back now? On the trail they simply turn around; at work they come home with part of the haul.')) return;
+    if (!confirm('Recall the squad now? On the way out they come back with no loot. At work they bring part of the loot.')) return;
     const r = ui.game.recall(d.id);
-    if (!r.ok) ui.fail(r); else { ui.toast('The party is turning back', '', 'item_compass'); ui.renderSide(); }
+    if (!r.ok) ui.fail(r); else { ui.toast('Squad recalled. Heading home', '', 'item_compass'); ui.renderSide(); }
   },
   claimExp(ui, d) {
     const r = ui.game.claimExpedition(d.id);
@@ -832,7 +832,7 @@ export const ACTIONS = {
   cExp(ui, d, el) {
     if (el && el.classList.contains('off')) { ui.toast(el.dataset.why || 'Not now', 'bad'); return; }
     ui.enterFrontier();
-    ui.toast('Pick a place on the map to plan the trip', '', 'item_compass');
+    ui.toast('Pick a place on the map to send a squad', '', 'item_compass');
   },
   cWork(ui, d, el) { if (el && el.classList.contains('off')) { ui.toast(el.dataset.why || 'Not now', 'bad'); return; } ui.open('jobs', { id: d.id }); },
   cClear(ui, d, el) {
@@ -845,11 +845,11 @@ export const ACTIONS = {
       const wx = ui.home.tx(cl.x + 0.5), wz = ui.home.tx(cl.z + 0.5), dist = Math.hypot((c.px ?? 0) - wx, (c.pz ?? 0) - wz);
       if (dist < bd) { bd = dist; best = cl; }
     }
-    if (!best) { ui.toast('Your land is clear. New growth appears over time, or expand your land', '', 'item_axe'); return; }
+    if (!best) { ui.toast('Nothing to clear. New trees grow over time, or expand your land', '', 'item_axe'); return; }
     const r = g.startClear(best.id, c.id);
     if (!r.ok) { ui.fail(r); return; }
     ui.sfx.play('order');
-    ui.toast(`${c.name} is on it: ${CLEARABLES[best.type].name}`, '', 'item_axe');
+    ui.toast(`${c.name} is clearing: ${CLEARABLES[best.type].name}`, '', 'item_axe');
     ui.renderCtx();
   },
   cBuild(ui, d, el) {

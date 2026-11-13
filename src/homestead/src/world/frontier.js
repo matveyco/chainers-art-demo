@@ -32,16 +32,16 @@ export class FrontierWorld {
     this._syncParties();
     const bus = game.bus;
     bus.on('pois', () => this._syncPois());
-    bus.on('exp:launch', (e) => { this._syncParties(); this._syncPois(); if (this.active) { const p = this.partyPos(e.id); if (p) fx.burst('dust', p.x, 0.4, p.z, 10); } });
+    bus.on('exp:launch', (e) => { this._syncParties(); this._syncPois(); if (this.active) { const p = this.partyPos(e.id); if (p) fx.depart(p.x, p.z, 0, 1); } });
     bus.on('exp:claimed', () => { this._syncParties(); this._syncPois(); });
     bus.on('exp:change', () => this._syncParties());
     bus.on('exp:phase', (e, ph) => {
       if (!this.active) return;
       const p = this.partyPos(e.id);
       if (!p) return;
-      if (ph === 'work') { fx.burst('dust', p.x, 0.4, p.z, 12, 1.2); }
-      if (ph === 'back') { fx.burst('sparkle', p.x, 2.2, p.z, 10, 1.3); }
-      if (ph === 'home') { fx.burst('confetti', p.x, 2.4, p.z, 24, 1.2); }
+      if (ph === 'work') { fx.poof(p.x, p.z, 1.3); fx.ring(p.x, this.origin.y + 0.1, p.z, 0.5, 2.6, { life: 0.4 }); }
+      if (ph === 'back') { fx.burst('sparkle', p.x, 1.0, p.z, 12, 1.4, { shape: 'fountain', radius: 1, angle: 10, delay: 0.4, speed: 2.2 }); fx.depart(p.x, p.z, 0, -1); }
+      if (ph === 'home') { fx.arrive(p.x, p.z); }
     });
     if (engine.seasons) engine.seasons.onSwap((fade) => engine.seasons.defer(() => this.island.repaint(fade && this.active)));
     engine.onUpdate((dt, t) => this.update(dt, t));
@@ -79,6 +79,9 @@ export class FrontierWorld {
       return R[zoneAt(x + 0.5, z + 0.5)].ground.shade;
     };
     this.island.rebuild(this.kindAt, this.shadeAt);
+    // where the water is (metres, flat x,z pairs): the sun glints on it
+    this._water = [];
+    for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) if (this.kindAt(x, z) === 'water') { const p = this.w(x + 0.5, z + 0.5); this._water.push(p.x, p.z); }
   }
   _collect(root, into) {
     walk(root, (n) => {
@@ -89,7 +92,7 @@ export class FrontierWorld {
       else if (nm.startsWith('spinZ_')) into.spin.push({ n, ax: 1 });
       else if (nm.startsWith('bob_')) into.bob.push({ n, y: n.getLocalPosition().y, ph: Math.random() * 6 });
       else if (nm.startsWith('glow_')) this.engine.glowOf(n, into.glow);
-      else if (nm.startsWith('fx_')) { const kind = nm.startsWith('fx_smoke') ? 'smoke' : nm.startsWith('fx_fire') ? 'fire' : null; if (kind) (into.fx = into.fx || []).push(this.fx.emitter(kind, n, kind === 'smoke' ? 1.4 : 6)); }
+      else if (nm.startsWith('fx_')) { const kind = nm.startsWith('fx_smoke') ? 'smoke' : nm.startsWith('fx_fire') ? 'fire' : null; if (kind) (into.fx = into.fx || []).push(this.fx.emitter(kind, n, kind === 'smoke' ? 2.4 : 8)); }
     });
   }
   _dress() {
@@ -277,7 +280,10 @@ export class FrontierWorld {
       if (pv.fxT <= 0) {
         pv.fxT = 0.9 + Math.random() * 0.8;
         const kind = { lumber: 'chips', mining: 'pebbles', forage: 'leaves', fight: 'dust', explore: 'sparkle', craft: 'chips' }[T.act] || 'dust';
-        this.fx.burst(kind, this.origin.x + site.x + (Math.random() - 0.5) * 2, 1.1, this.origin.z + site.z + 1.6, T.act === 'fight' ? 9 : 5, T.act === 'fight' ? 1.4 : 1);
+        const fxx = this.origin.x + site.x + (Math.random() - 0.5) * 2, fxz = this.origin.z + site.z + 1.6;
+        if (kind === 'chips' || kind === 'pebbles') this.fx.chop(kind, fxx, 1.1, fxz);
+        else if (kind === 'dust') this.fx.burst('dust', fxx, 0.5, fxz, 9, 1.3, { shape: 'ring', radius: 0.4, up: 1.6 });
+        else this.fx.burst(kind, fxx, 1.1, fxz, 5, 1, { shape: 'fountain', angle: 40 });
       }
     }
     if (pv.camp) {
@@ -372,5 +378,14 @@ export class FrontierWorld {
     this.engine.animate(this.anim, dt, t);
     for (const pv of this.pois.values()) this.engine.animate(pv.anim, dt, t);
     for (const pv of this.parties.values()) this._placeParty(pv, dt, t);
+    // glints on open water near the camera (a few a second; ice only winks now and then)
+    const W = this._water, nW = W.length >> 1;
+    if (nW) {
+      const r = this.engine.rig, o = this.origin, reach = r.curDist * 0.75, ice = this.engine.seasons && this.engine.seasons.def.water === 'ice';
+      for (let k = Math.random() < dt * nW * (ice ? 0.06 : 0.3) ? 3 : 0; k > 0; k--) {
+        const i = ((Math.random() * nW) | 0) * 2, x = o.x + W[i] + (Math.random() - 0.5) * TILE * 0.8, z = o.z + W[i + 1] + (Math.random() - 0.5) * TILE * 0.8;
+        if (Math.abs(x - r.cur.x) < reach && Math.abs(z - r.cur.z) < reach) this.fx.burst('glint', x, o.y + 0.07, z, 1, 1, { zoom: 0.5 });
+      }
+    }
   }
 }

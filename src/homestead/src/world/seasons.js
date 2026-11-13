@@ -17,6 +17,8 @@ const lin = (hex) => srgb(hex).map((v) => Math.pow(v, 2.2));
 const mix = (a, b, k) => a + (b - a) * k;
 const mixN = (a, b, k) => a.map((v, i) => mix(v, b[i], k));
 const smooth = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+/** The wind right now: the season's own strength breathing in slow gusts. Weather motes and chimney smoke share it. */
+export const windAt = (engine) => { const s = engine.seasons, t = engine.time; return (s ? s.def.wind : 1) * (0.8 + 0.3 * Math.sin(t * 0.37) + 0.14 * Math.sin(t * 1.21 + 1.3)); };
 
 // ---------------------------------------------------------------------------------------------------
 // shader chunks (GLSL, PlayCanvas 2.x StandardMaterial front end)
@@ -181,7 +183,7 @@ class Weather {
       e.render.batchGroupId = this.group.id;
       e.enabled = false;
       this.root.addChild(e);
-      this.items.push({ e, x: 0, y: 0, z: 0, vy: 0, ph: Math.random() * 6.28, s: 0.1, spin: 0, rot: Math.random() * 360 });
+      this.items.push({ e, x: 0, y: 0, z: 0, vy: 0, ph: Math.random() * 6.28, s: 0.1, spin: 0, rot: Math.random() * 360, yaw: Math.random() * 360, flip: false });
     }
     this.kind = null; this.cfg = null; this.wind = 0;
     this.R = 25; this.H = 15;
@@ -210,19 +212,24 @@ class Weather {
     it.vy = mix(c.fall[0], c.fall[1], Math.random());
     it.s = mix(c.size[0], c.size[1], Math.random());
     it.spin = c.spin * (0.5 + Math.random());
+    it.flip = Math.random() < 0.3;                       // about one leaf in three tumbles end over end, the rest rock like a cradle
+    if (!c.flat && !c.low && Math.random() < 0.12) { it.s *= 1.3; it.vy *= 0.75; }      // a few fat, slow flakes
   }
   update(dt, t) {
     const c = this.cfg;
     if (!c) return;
     const o = this.engine.rig.cur, R = this.R, top = c.low ? 6 : this.H;
-    const wx = this.wind * 0.92, wz = this.wind * 0.38;
+    const wind = windAt(this.engine), wx = wind * 0.92, wz = wind * 0.38;      // gusts: the same wind that bends the chimney smoke
     // a mote drifting right past the lens would fill the screen as one flat square: shrink it away as it nears
     const cp = this.engine.camera.getPosition(), near = Math.max(7, this.engine.rig.curDist * 0.42);
     for (let i = 0; i < c.count; i++) {
       const it = this.items[i];
-      it.x += (wx + Math.sin(t * 0.9 + it.ph) * c.drift) * dt;
-      it.z += (wz + Math.cos(t * 0.7 + it.ph * 1.3) * c.drift) * dt;
-      it.y -= it.vy * dt;
+      // flat cards (leaves, petals) fall like paper: they rock from side to side, slide the way they lean and
+      // drop fastest through the middle of each swing
+      const sw = t * (1.7 + (it.ph % 1) * 0.9) + it.ph, rock = c.flat ? Math.sin(sw) : 0;
+      it.x += (wx + Math.sin(t * 0.9 + it.ph) * c.drift + rock * Math.cos(it.ph) * c.drift * 0.9) * dt;
+      it.z += (wz + Math.cos(t * 0.7 + it.ph * 1.3) * c.drift + rock * Math.sin(it.ph) * c.drift * 0.9) * dt;
+      it.y -= it.vy * (c.flat ? 0.55 + 0.75 * Math.abs(Math.cos(sw)) : 1) * dt;
       if (c.low) it.y += Math.sin(t * 0.6 + it.ph) * 0.35 * dt;
       if (it.x - o.x > R) it.x -= 2 * R; else if (it.x - o.x < -R) it.x += 2 * R;
       if (it.z - o.z > R) it.z -= 2 * R; else if (it.z - o.z < -R) it.z += 2 * R;
@@ -231,11 +238,19 @@ class Weather {
       const cd = Math.hypot(it.x - cp.x, it.y - cp.y, it.z - cp.z);
       const k = cd >= near ? 1 : Math.max(0.001, (cd / near) ** 3);
       if (c.flat) {
-        it.rot += it.spin * dt;
-        it.e.setLocalEulerAngles(it.rot, it.rot * 0.6, Math.sin(t * 2 + it.ph) * 40);
+        it.yaw += it.spin * 0.22 * dt;
+        if (it.flip) { it.rot += it.spin * dt; it.e.setLocalEulerAngles(it.rot, it.yaw, rock * 30); }
+        else it.e.setLocalEulerAngles(Math.cos(sw * 0.8) * 22, it.yaw, rock * 58);
         it.e.setLocalScale(it.s * k, it.s * 0.12 * k, it.s * 0.8 * k);
+      } else if (c.low) {
+        // fireflies blink in three hard steps rather than pulse
+        const b = Math.sin(t * 2.6 + it.ph * 3), s = it.s * (b > 0.35 ? 1 : b > -0.45 ? 0.62 : 0.22) * k;
+        it.e.setLocalScale(s, s, s);
       } else {
-        const s = (c.low ? it.s * (0.55 + 0.45 * Math.sin(t * 2.6 + it.ph * 3)) : it.s) * k;
+        // snow: little cubes turning slowly as they fall
+        it.rot += (38 + (it.ph % 1) * 70) * dt;
+        it.e.setLocalEulerAngles(it.rot, it.rot * 0.7 + it.yaw, 0);
+        const s = it.s * k;
         it.e.setLocalScale(s, s, s);
       }
     }

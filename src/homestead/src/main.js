@@ -27,12 +27,12 @@ function renderLogin() {
   const saved = Game.listUsers().slice(0, 4);
   loginEl.innerHTML = `<div class="box">
     <div class="logo">Chainer&rsquo;s<small>HOMESTEAD</small></div>
-    <p style="margin-top:14px">Build a cosy home, send your Chainers on expeditions, fill the Reward Pool.</p>
+    <p style="margin-top:14px">Build your Homestead, send squads for loot, earn ETH from the Reward Pool.</p>
     <div class="name"><b id="lg-name">${name}</b><button class="btn ghost sm" id="lg-roll" title="New random name" aria-label="New random name">Reroll</button></div>
     <button class="btn green wide" id="lg-play">${assetsReady ? 'Play' : 'Loading…'}</button>
     ${saved.length ? `<div class="tiny">Continue as</div><div class="saved">${saved.map(u => `<button class="btn ghost sm" data-user="${u}">${u}</button>`).join('')}</div>` : ''}
     <div id="loading" class="${assetsReady ? 'hide' : ''}"><div class="bar"><i id="lg-bar" style="width:${progress * 100}%"></i></div></div>
-    <div class="tiny">Mock login for now: a random player name, saved in this browser. No account, no wallet.</div>
+    <div class="tiny">Test login: a random player name, saved in this browser. No account, no wallet.</div>
   </div>`;
   loginEl.querySelector('#lg-roll').onclick = () => { name = randomName(); sfx.play('click'); renderLogin(); };
   loginEl.querySelector('#lg-play').onclick = () => tryStart(name);
@@ -117,7 +117,7 @@ function start(user) {
       if (!r.ok) { if (r.locked) ui.open('land'); else ui.fail(r); return; }
       sfx.play(picked ? 'order' : 'click');
       const cv = home.cviews.get(c.id); if (cv) fx.squash(cv.m, 0.12, 0.3, c.sc);
-      ui.toast(`${r.who.name} is on it: ${CLEARABLES[c.type].name}`, '', 'item_axe');
+      ui.toast(`${r.who.name} is clearing: ${CLEARABLES[c.type].name}`, '', 'item_axe');
       if (ui.ctxPanel) ui.renderCtx();
     } else ui.closeCtx();
   };
@@ -131,12 +131,12 @@ function start(user) {
 
   if (game.isNew) {
     ui.celebrate({
-      title: 'Welcome home!', hero: 'home_1', quiet: true, button: "Let's build",
-      html: `<p style="max-width:400px;margin:6px auto">This clearing is yours. Clear it, farm it, make it cosy. Wanderers will visit, parties will bring resources back from the frontier, and Crates you upload to the world <b>Reward Pool</b> earn ETH every 30 minutes.</p><p class="muted">A one-minute tour comes next.</p>`,
+      title: 'Welcome home!', hero: 'home_1', quiet: true, button: "Start",
+      html: `<p style="max-width:400px;margin:6px auto">This land is yours. Clear it, farm it and build on it. Send squads to the Frontier for loot. Upload Crates to the <b>Reward Pool</b> to earn ETH every 30 minutes.</p><p class="muted">Next: a 1-minute tour.</p>`,
       then: () => setTimeout(() => ui.howto(() => setTimeout(() => ui.tour(), 300)), 300),
     });
   } else if (game.offlineReport && game.offlineReport.away > 120) {
     const r = game.offlineReport;
-    ui.celebrate({ title: 'Welcome back!', hero: 'item_hourglass', quiet: true, text: `You were away for ${fmtTime(r.away)}. Your homestead kept working.`, loot: r.eth > 0 ? { eth: r.eth } : null, noFly: true, button: 'Continue' });
+    ui.celebrate({ title: 'Welcome back!', hero: 'item_hourglass', quiet: true, text: `You were away for ${fmtTime(r.away)}. Your Homestead kept working.`, loot: r.eth > 0 ? { eth: r.eth } : null, noFly: true, button: 'Continue' });
   }
 }

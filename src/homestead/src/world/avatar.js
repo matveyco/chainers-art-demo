@@ -2,8 +2,30 @@
 // voxel hats / hair on the head bone, tools in the hand, and animation control.
 import { pc, walk } from './engine.js';
 import { asset } from '../core/assets.js';
-import { mulberry32, pick } from '../core/util.js';
+import { mulberry32, pick, clamp } from '../core/util.js';
 import { CHAINER_SCALE } from '../data/config.js';
+
+// ----------------------------------------------------------------------------------------------
+// animation tuning. The clips are built by tools/blender/build_chainer.py (it prints the gait numbers).
+// ----------------------------------------------------------------------------------------------
+// stride = rig units of ground one cycle of the clip covers. Playing a gait at  speed / stride  cycles
+// per second keeps the planted foot planted, whatever speed the world moves the Chainer at.
+const GAIT = {
+  walk: { stride: 0.95, min: 0.7, max: 2.0 },
+  run: { stride: 1.8, min: 1.0, max: 2.9 },
+  carry: { stride: 0.84, min: 0.7, max: 2.1 },
+};
+const RUN_ABOVE = 1.75, WALK_BELOW = 1.45;   // rig units / s where 'walk' hands over to 'run' and back
+// play('work') picks the swing that suits the tool in the hand; 'work' itself is the fallback
+const TOOL_CLIP = { tool_axe: 'chop', tool_pickaxe: 'mine', tool_hoe: 'dig', tool_hammer: 'hammer' };
+// where in the cycle the blow lands (onHit fires there)
+const HIT_AT = { work: 15 / 24, chop: 15 / 24, mine: 15 / 24, dig: 14 / 24, hammer: 12 / 24 };
+// cross-fade seconds: into a clip, and the pairs that want their own
+const FADE_IN = { idle: 0.28, walk: 0.2, run: 0.2, carry: 0.25, work: 0.22, chop: 0.22, mine: 0.22, dig: 0.22, hammer: 0.22, cheer: 0.12, wave: 0.25, sit: 0.45, fidget: 0.35 };
+const FADE_PAIR = { 'walk>run': 0.25, 'run>walk': 0.3, 'sit>idle': 0.4, 'sit>walk': 0.35, 'sit>run': 0.35, 'cheer>idle': 0.3, 'fidget>idle': 0.4 };
+const FROM_START = { cheer: 1, wave: 1, fidget: 1 };      // gestures start on their first frame; loops start at the Chainer's own phase
+const OWN_TEMPO = { idle: 1, sit: 1, wave: 1 };            // clips that run a few percent faster or slower per Chainer
+const FIDGET_LEN = 76 / 24;
 
 const N = 128, EMPTY = 32767;
 let TEXMAP = null;      // Int16Array rest position (mm) per atlas texel
@@ -150,13 +172,20 @@ export class Avatar {
       const tr = a.resource;
       const name = (tr && tr.name) || a.name;
       if (!tr) continue;
-      const speed = name === 'walk' || name === 'carry' ? 1.25 : 1;
-      e.anim.assignAnimation(name, tr, undefined, speed, true);
+      e.anim.assignAnimation(name, tr, undefined, 1, true);   // playback rate is set every frame in _update
       this.clips.add(name);
     }
     this.anim = null;
-    this.play('idle', 0);
     this.tool = null; this.toolName = null;
+    // each Chainer keeps its own phase and tempo, so a group never moves in step
+    const r = mulberry32(((chainer.look >>> 0) ^ 0x9e3779b9) >>> 0);
+    this._phase = 0.03 + 0.94 * r(); this._rate = 0.93 + 0.14 * r(); this._fidT = 6 + 24 * r(); this._fid = 0;
+    this._spd = 0; this._v = 0; this._wait = 0;
+    this._m = { lean: 0, leanV: 0, bank: 0, bankV: 0, sq: 0, sqV: 0, yaw: 0 };
+    this.onHit = null;                    // (clip) => {} : called on the frame a work swing lands
+    this.play('idle', 0);
+    this._live = !opts.still;             // portraits are posed once and never ticked
+    if (this._live) { this._tick = (dt) => this._update(dt); host.app.on('update', this._tick); }
   }
   _prepareBones() {
     const root = this.body;
@@ -240,14 +269,85 @@ export class Avatar {
     slot.node.addChild(holder);
     this.tool = holder;
   }
-  play(name, fade = 0.18) {
+  /** Ask for a clip. 'work' becomes chop / mine / dig / hammer by the tool in the hand, 'walk' becomes
+   *  'run' when the ground moves fast. The switch happens in _update, after the tool and the speed are known. */
+  play(name, fade) {
     if (!this.clips.has(name)) name = 'idle';
-    if (this.anim === name) return;
+    this._req = name; this._reqFade = fade;
+    if (!this._live) this._apply();
+  }
+  _apply() {
+    let name = this._req;
+    const cur = this.anim, layer = this.body.anim.baseLayer;
+    if (name === 'work') {
+      const c = TOOL_CLIP[this.toolName];
+      if (c && this.clips.has(c)) name = c;
+    } else if (name === 'walk' && this.clips.has('run')) {
+      if (!GAIT[cur] && this._v < 0.05 && this._wait++ < 2) return;      // speed not measured yet: wait a frame
+      name = cur === 'run' ? (this._v < WALK_BELOW ? 'walk' : 'run') : (this._v > RUN_ABOVE ? 'run' : 'walk');
+    } else if (name === 'idle' && this._fid && this.clips.has('fidget')) name = 'fidget';
+    this._wait = 0;
+    if (cur === name) return;
     this.anim = name;
-    const layer = this.body.anim.baseLayer;
-    try { if (fade > 0 && layer.activeState) layer.transition(name, fade); else layer.play(name); } catch (e) { /* anim not ready yet */ }
+    const fade = this._reqFade !== undefined ? this._reqFade : (FADE_PAIR[cur + '>' + name] ?? FADE_IN[name] ?? 0.2);
+    try {
+      // loops start at this Chainer's own phase; one gait hands its step phase to the next
+      let off = FROM_START[name] ? null : this._phase;
+      if (GAIT[name] && GAIT[cur] && layer.activeStateDuration > 0) off = clamp((layer.activeStateCurrentTime / layer.activeStateDuration) % 1, 0.001, 0.999);
+      if (fade > 0 && layer.activeState) layer.transition(name, fade, off); else layer.play(name);
+      if (cur === null) this._phased = false;
+    } catch (e) { /* anim not ready yet */ }
+    if (name === 'sit' || (GAIT[cur] && !GAIT[name])) this._m.sqV -= 0.85;   // settle: a small squash on sitting down or stopping
+  }
+  /** Every frame (not for portraits): measure how the world moves this Chainer and make the body agree. */
+  _update(dt) {
+    const e = this.entity, body = this.body, anim = body.anim;
+    if (!e.enabled || !anim || dt <= 0) return;
+    const p = e.getLocalPosition(), q = e.getLocalRotation();
+    const yaw = 2 * Math.atan2(q.y, q.w) * 180 / Math.PI;
+    let v = 0, turn = 0;
+    if (this._px !== undefined) {
+      const d = Math.hypot(p.x - this._px, p.z - this._pz);
+      if (d < 1.5) v = d / Math.min(dt, 0.1) / CHAINER_SCALE;             // a bigger jump is a teleport, not a stride
+      turn = ((yaw - this._pyaw + 540) % 360) - 180;
+    }
+    this._px = p.x; this._pz = p.z; this._pyaw = yaw;
+    dt = Math.min(dt, 0.05);
+    this._v = v;
+    this._spd += (v - this._spd) * Math.min(1, dt * 14);
+    // now and then an idle Chainer scratches its head (the official idle's gesture)
+    if (this._req === 'idle' && (this.anim === 'idle' || this.anim === 'fidget')) {
+      this._fidT -= dt;
+      if (this._fidT <= 0) { this._fid = this._fid ? 0 : 1; this._fidT = this._fid ? FIDGET_LEN - 0.45 : 14 + Math.random() * 24; }
+    } else if (this._fid) { this._fid = 0; this._fidT = 10 + Math.random() * 20; }
+    this._apply();
+    const layer = anim.baseLayer, g = GAIT[this.anim];
+    if (!this._phased && layer.activeState === this.anim) {               // the very first clip starts mid-loop too
+      this._phased = true;
+      try { if (!FROM_START[this.anim]) layer.activeStateCurrentTime = this._phase * layer.activeStateDuration; } catch (err) { /* not ready */ }
+    }
+    // gaits follow the ground so the planted foot does not slide; the calm loops keep a personal tempo
+    anim.speed = g ? clamp(this._spd / g.stride, g.min, g.max) : (OWN_TEMPO[this.anim] ? this._rate : 1);
+    const hitAt = HIT_AT[this.anim];
+    if (hitAt !== undefined && layer.activeState === this.anim && layer.activeStateDuration > 0) {
+      const ph = (layer.activeStateCurrentTime / layer.activeStateDuration) % 1, was = this._ph;
+      if (was !== undefined && (ph >= was ? (was < hitAt && ph >= hitAt) : (was < hitAt || ph >= hitAt)) && this.onHit) this.onHit(this.anim);
+      this._ph = ph;
+    } else this._ph = undefined;
+    // body on springs: lean into the stride, bank into a turn, trail the turn a little, settle when stopping
+    const m = this._m;
+    const leanT = g ? Math.min(5, this._spd * 1.3) : 0;
+    const bankT = g ? clamp(-turn / dt * 0.028, -7, 7) : 0;
+    m.leanV += ((leanT - m.lean) * 70 - m.leanV * 8) * dt; m.lean += m.leanV * dt;
+    m.bankV += ((bankT - m.bank) * 90 - m.bankV * 15) * dt; m.bank += m.bankV * dt;
+    m.sqV += (-m.sq * 170 - m.sqV * 13) * dt; m.sq += m.sqV * dt;
+    m.yaw = clamp(m.yaw - turn, -60, 60) * Math.exp(-dt * 13);           // the entity turns, the body eases after it
+    body.setLocalEulerAngles(m.lean, m.yaw, m.bank);
+    const s = CHAINER_SCALE, k = clamp(m.sq, -0.12, 0.12);
+    body.setLocalScale(s * (1 - k * 0.5), s * (1 + k), s * (1 - k * 0.5));
   }
   destroy() {
+    if (this._tick) this.host.app.off('update', this._tick);
     if (this._tex) this._tex.destroy();
     this.entity.destroy();
   }
@@ -297,7 +397,7 @@ export class Studio {
     if (!this.ready) return '';
     let url = '';
     try {
-      const av = new Avatar(this, chainer, { castShadows: false });
+      const av = new Avatar(this, chainer, { castShadows: false, still: true });
       this.app.root.addChild(av.entity);
       av.entity.setEulerAngles(0, 24, 0);
       const s = CHAINER_SCALE;

@@ -32,19 +32,19 @@ export const CRATES = {
 // Chainer stats: 3 main + 2 additional
 // ----------------------------------------------------------------------------------------------
 export const STATS = {
-  might:   { name: 'Might',   short: 'MGT', icon: 'item_dumbbell', main: true,  color: '#e2574c', desc: 'Raw strength. Chopping, mining and fighting.' },
-  agility: { name: 'Agility', short: 'AGI', icon: 'item_feather',  main: true,  color: '#3aa3e3', desc: 'Speed and nimble hands. Chopping, foraging, fighting, exploring.' },
-  wits:    { name: 'Wits',    short: 'WIT', icon: 'item_book',     main: true,  color: '#9a6bd8', desc: 'Cleverness. Exploring, foraging, mining and crafting.' },
-  stamina: { name: 'Stamina', short: 'STA', icon: 'item_bolt',     main: false, color: '#f4ab1b', desc: 'Recovers faster after expeditions and shrugs off harsh terrain.' },
-  luck:    { name: 'Luck',    short: 'LCK', icon: 'item_clover',   main: false, color: '#4fb84a', desc: 'Better odds, bonus loot and jackpot finds.' },
+  might:   { name: 'Might',   short: 'MGT', icon: 'item_dumbbell', main: true,  color: '#e2574c', desc: 'Strength. Good for chopping, mining and fighting.' },
+  agility: { name: 'Agility', short: 'AGI', icon: 'item_feather',  main: true,  color: '#3aa3e3', desc: 'Speed. Good for chopping, gathering, fighting and exploring.' },
+  wits:    { name: 'Wits',    short: 'WIT', icon: 'item_book',     main: true,  color: '#9a6bd8', desc: 'Brains. Good for exploring, gathering, mining and crafting.' },
+  stamina: { name: 'Stamina', short: 'STA', icon: 'item_bolt',     main: false, color: '#f4ab1b', desc: 'Shorter rest after expeditions. Helps on hard terrain.' },
+  luck:    { name: 'Luck',    short: 'LCK', icon: 'item_clover',   main: false, color: '#4fb84a', desc: 'Higher success chance, bonus loot and jackpots.' },
 };
 export const STAT_KEYS = ['might', 'agility', 'wits', 'stamina', 'luck'];
 
 // Which stats matter for which activity (weights sum to 1).
 export const ACTIVITIES = {
-  lumber:  { name: 'Lumber',   icon: 'item_axe',     w: { might: 0.6, agility: 0.4 }, tool: 'tool_axe',     verb: 'Chopping' },
+  lumber:  { name: 'Chopping', icon: 'item_axe',     w: { might: 0.6, agility: 0.4 }, tool: 'tool_axe',     verb: 'Chopping' },
   mining:  { name: 'Mining',   icon: 'item_pickaxe', w: { might: 0.7, wits: 0.3 },    tool: 'tool_pickaxe', verb: 'Mining' },
-  forage:  { name: 'Foraging', icon: 'item_basket',  w: { agility: 0.5, wits: 0.5 },  tool: 'tool_hoe',     verb: 'Foraging' },
+  forage:  { name: 'Gathering', icon: 'item_basket', w: { agility: 0.5, wits: 0.5 },  tool: 'tool_hoe',     verb: 'Gathering' },
   fight:   { name: 'Fighting', icon: 'item_sword',   w: { might: 0.5, agility: 0.5 }, tool: 'tool_sword',   verb: 'Fighting' },
   explore: { name: 'Exploring', icon: 'item_compass', w: { wits: 0.7, agility: 0.3 }, tool: 'tool_torch',   verb: 'Exploring' },
   craft:   { name: 'Crafting', icon: 'item_hammer',  w: { wits: 0.6, agility: 0.4 },  tool: 'tool_hammer',  verb: 'Crafting' },
@@ -60,15 +60,15 @@ export const RARITY = {
 export const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 export const TRAITS = {
-  lumberjack: { name: 'Lumberjack',  desc: '+25% Wood from everything',            icon: 'item_axe' },
-  stonehand:  { name: 'Stonehand',   desc: '+25% Stone and Ore from everything',   icon: 'item_pickaxe' },
-  greenthumb: { name: 'Green Thumb', desc: '+30% Biopoints when working a farm',   icon: 'item_basket' },
+  lumberjack: { name: 'Lumberjack',  desc: '+25% Wood from all sources',           icon: 'item_axe' },
+  stonehand:  { name: 'Stonehand',   desc: '+25% Stone and Ore from all sources',  icon: 'item_pickaxe' },
+  greenthumb: { name: 'Green Thumb', desc: '+30% Biopoints when working on a farm', icon: 'item_basket' },
   brawler:    { name: 'Brawler',     desc: '+20% power in fights',                 icon: 'item_sword' },
   pathfinder: { name: 'Pathfinder',  desc: 'Expeditions are 20% faster',           icon: 'item_compass' },
   tinkerer:   { name: 'Tinkerer',    desc: '+25% crafting speed when working',     icon: 'item_hammer' },
   nightowl:   { name: 'Night Owl',   desc: 'Rests 30% faster',                     icon: 'item_bolt' },
-  charmer:    { name: 'Lucky Charm', desc: '+3 Luck for the whole team',           icon: 'item_clover' },
-  lightfoot:  { name: 'Light Eater', desc: 'Eats half the Biopoints',              icon: 'item_food_bowl' },
+  charmer:    { name: 'Lucky Charm', desc: '+3 Luck for the whole squad',          icon: 'item_clover' },
+  lightfoot:  { name: 'Light Eater', desc: 'Eats 50% fewer Biopoints',             icon: 'item_food_bowl' },
 };
 
 export const NAMES = ['Pell', 'Ilva', 'Bix', 'Momo', 'Tavi', 'Juno', 'Rook', 'Pip', 'Nilo', 'Zuzu', 'Brim', 'Kato', 'Lumi', 'Dax', 'Fenn',
@@ -81,16 +81,16 @@ export const USER_NOUN = ['Chainer', 'Farmer', 'Builder', 'Wanderer', 'Tinker', 
 
 // Wishes: a "condition" a wandering guest hopes to find at your home.
 export const WISHES = {
-  campfire: { text: 'a crackling Campfire',   need: { decor_campfire: 1 } },
-  well:     { text: 'fresh water from a Well', need: { well: 1 } },
-  flowers:  { text: 'three Flower Beds',      need: { decor_flowerbed: 3 } },
-  bench:    { text: 'a Bench to sit on',      need: { decor_bench: 1 } },
-  lantern:  { text: 'two warm Lanterns',      need: { decor_lantern: 2 } },
+  campfire: { text: 'a Campfire',             need: { decor_campfire: 1 } },
+  well:     { text: 'a Well',                 need: { well: 1 } },
+  flowers:  { text: '3 Flower Beds',          need: { decor_flowerbed: 3 } },
+  bench:    { text: 'a Bench',                need: { decor_bench: 1 } },
+  lantern:  { text: '2 Lanterns',             need: { decor_lantern: 2 } },
   lodge:    { text: 'a Rest Lodge',           need: { rest_lodge: 1 } },
-  fountain: { text: 'a splashing Fountain',   need: { decor_fountain: 1 } },
-  pond:     { text: 'a quiet Pond',           need: { decor_pond: 1 } },
+  fountain: { text: 'a Fountain',             need: { decor_fountain: 1 } },
+  pond:     { text: 'a Pond',                 need: { decor_pond: 1 } },
   arena:    { text: 'a Training Ground',      need: { arena: 1 } },
-  statue:   { text: 'a statue of Gleam',      need: { decor_statue: 1 } },
+  statue:   { text: 'a Statue of Gleam',      need: { decor_statue: 1 } },
 };
 
 // ----------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ export const WISHES = {
 // ----------------------------------------------------------------------------------------------
 export const COSY_TIERS = [
   { min: 0,   name: 'Bare',       odds: [88, 12, 0, 0, 0],    interval: 150 },
-  { min: 20,  name: 'Homely',     odds: [70, 26, 4, 0, 0],    interval: 130 },
+  { min: 20,  name: 'Comfy',      odds: [70, 26, 4, 0, 0],    interval: 130 },
   { min: 50,  name: 'Snug',       odds: [52, 34, 12, 2, 0],   interval: 110 },
   { min: 100, name: 'Charming',   odds: [36, 36, 21, 6, 1],   interval: 95 },
   { min: 180, name: 'Enchanting', odds: [22, 34, 28, 13, 3],  interval: 80 },
@@ -117,85 +117,85 @@ export const ETH_STEP = [0, 0, 0, 0.0010, 0.0035, 0.0090];  // ETH needed to upg
 export const BUILDINGS = {
   home: {
     name: 'Chainer Home', cat: 'core', size: [3, 3], max: 1, maxLevel: 5, models: ['home_1', 'home_1', 'home_2', 'home_2', 'home_3'],
-    desc: 'Where your own Chainers live. Its level unlocks everything else.', icon: 'home_1', cosy: lv(5, l => 4 + l * 4),
+    desc: 'Your Chainers live here. Upgrade it to unlock new buildings.', icon: 'home_1', cosy: lv(5, l => 4 + l * 4),
     base: { wood: 60, stone: 40 }, growth: 3.0, ethMul: 2.0, add: { 3: { planks: 15, bricks: 10 }, 4: { planks: 40, bricks: 40, ingot: 6 }, 5: { planks: 90, bricks: 90, ingot: 25, crystal: 6 } },
     slots: [2, 3, 4, 6, 8], builders: [2, 2, 3, 3, 4],
   },
   camp: {
     name: 'Wanderer Camp', cat: 'core', size: [3, 3], max: 1, maxLevel: 4, models: ['camp_1', 'camp_1', 'camp_2', 'camp_2'],
-    desc: 'Travelling Wanderers rest here. Feed them, make them cosy and they will work for you.', icon: 'camp_1', cosy: lv(4, l => 3 + l * 3),
+    desc: 'Wanderers visit and stay here. Feed them and they work for you.', icon: 'camp_1', cosy: lv(4, l => 3 + l * 3),
     base: { wood: 40, stone: 15 }, growth: 3.2, ethMul: 1.2, add: { 3: { planks: 20 }, 4: { planks: 45, bricks: 30 } },
     guests: [1, 2, 3, 4], homeReq: [1, 2, 3, 4],
   },
   farm_plot: {
     name: 'Farm Plot', cat: 'produce', size: [2, 2], max: [2, 3, 4, 6, 8], maxLevel: 5, models: ['farm_plot'],
-    desc: 'Grow crops for Biopoints — the food that keeps every Chainer going.', icon: 'farm_plot', cosy: lv(5, () => 1),
+    desc: 'Grows crops for Biopoints, the food for all Chainers.', icon: 'farm_plot', cosy: lv(5, () => 1),
     base: { wood: 25, stone: 10 }, growth: 2.4, ethMul: 0.4, add: { 4: { planks: 12 }, 5: { planks: 30, bricks: 10 } },
     yieldMul: [1, 1.25, 1.5, 1.8, 2.2], job: 'forage',
   },
   warehouse: {
     name: 'Warehouse', cat: 'storage', size: [3, 2], max: [1, 1, 2, 2, 3], maxLevel: 5, models: ['warehouse'],
-    desc: 'Raises how much Wood, Stone, Ore and crafted goods you can hold.', icon: 'warehouse', cosy: lv(5, () => 1),
+    desc: 'More storage for Wood, Stone, Ore and crafted goods.', icon: 'warehouse', cosy: lv(5, () => 1),
     base: { wood: 70, stone: 50 }, growth: 2.6, ethMul: 0.8, add: { 3: { planks: 15 }, 4: { planks: 35, bricks: 25 }, 5: { planks: 70, bricks: 60, ingot: 10 } },
     capMul: [1.0, 2.2, 4.0, 7.0, 12.0],
   },
   granary: {
     name: 'Granary', cat: 'storage', size: [2, 2], max: [1, 1, 2, 2, 2], maxLevel: 5, models: ['granary'],
-    desc: 'Stores more Biopoints.', icon: 'granary', cosy: lv(5, () => 1),
+    desc: 'More storage for Biopoints.', icon: 'granary', cosy: lv(5, () => 1),
     base: { wood: 50, stone: 20 }, growth: 2.5, ethMul: 0.6, add: { 3: { planks: 10 }, 4: { planks: 25, bricks: 15 } },
     bioCap: [400, 900, 1800, 3500, 6500],
   },
   sawmill: {
     name: 'Sawmill', cat: 'produce', size: [3, 2], max: 1, maxLevel: 5, models: ['sawmill'], homeReq: [1, 2, 3, 4, 5],
-    desc: 'Saws Wood into Planks.', icon: 'sawmill', cosy: lv(5, () => 1),
+    desc: 'Turns Wood into Planks.', icon: 'sawmill', cosy: lv(5, () => 1),
     base: { wood: 80, stone: 40 }, growth: 2.6, ethMul: 0.8, add: { 3: { bricks: 12 }, 4: { bricks: 30, ingot: 4 }, 5: { bricks: 60, ingot: 14 } },
     recipe: { in: { wood: 4 }, out: { planks: 1 }, time: 14 }, speed: [1, 1.4, 1.9, 2.6, 3.5], queue: [6, 10, 16, 24, 36], job: 'craft',
   },
   stonecutter: {
     name: 'Stonecutter', cat: 'produce', size: [2, 2], max: 1, maxLevel: 5, models: ['stonecutter'], homeReq: [1, 2, 3, 4, 5],
-    desc: 'Cuts Stone into Bricks.', icon: 'stonecutter', cosy: lv(5, () => 1),
+    desc: 'Turns Stone into Bricks.', icon: 'stonecutter', cosy: lv(5, () => 1),
     base: { wood: 50, stone: 70 }, growth: 2.6, ethMul: 0.8, add: { 3: { planks: 12 }, 4: { planks: 30, ingot: 4 }, 5: { planks: 60, ingot: 14 } },
     recipe: { in: { stone: 4 }, out: { bricks: 1 }, time: 14 }, speed: [1, 1.4, 1.9, 2.6, 3.5], queue: [6, 10, 16, 24, 36], job: 'craft',
   },
   smelter: {
     name: 'Smelter', cat: 'produce', size: [2, 2], max: 1, maxLevel: 5, models: ['smelter'], homeReq: [2, 3, 3, 4, 5],
-    desc: 'Smelts Ore (with a little Wood) into Ingots.', icon: 'smelter', cosy: lv(5, () => 1),
+    desc: 'Turns Ore and a little Wood into Ingots.', icon: 'smelter', cosy: lv(5, () => 1),
     base: { stone: 120, wood: 60, bricks: 6 }, growth: 2.5, ethMul: 1.0, add: { 3: { planks: 15 }, 4: { planks: 30, bricks: 30 } },
     recipe: { in: { ore: 3, wood: 1 }, out: { ingot: 1 }, time: 26 }, speed: [1, 1.4, 1.9, 2.6, 3.5], queue: [4, 8, 12, 18, 26], job: 'craft',
   },
   workshop: {
     name: 'Crate Workshop', cat: 'pool', size: [3, 3], max: 1, maxLevel: 3, models: ['workshop'], homeReq: [1, 2, 3],
-    desc: 'Assemble Crates from your resources. Crates are what you upload into the Reward Pool.', icon: 'workshop', cosy: lv(3, () => 2),
+    desc: 'Craft Crates from resources. Upload Crates to the Reward Pool to earn ETH.', icon: 'workshop', cosy: lv(3, () => 2),
     base: { wood: 50, stone: 50 }, growth: 4.0, ethMul: 1.5, add: { 2: { planks: 10, bricks: 10 }, 3: { planks: 40, bricks: 40, ingot: 8 } },
     speed: [1, 1.35, 1.8], queue: [3, 5, 8], job: 'craft',
   },
   pool_shrine: {
     name: 'Pool Shrine', cat: 'pool', size: [3, 3], max: 1, maxLevel: 3, models: ['pool_shrine'], homeReq: [1, 3, 4], global: 'Reward Pool',
-    desc: 'Your link to the world Reward Pool, shared by every player. Upload Crates here; every 30 minutes the pool pays ETH by share.', icon: 'pool_shrine', cosy: lv(3, l => 3 + l * 2),
+    desc: 'Your access to the Reward Pool, shared by all players. Upload Crates here. Every 30 minutes the pool pays ETH by share.', icon: 'pool_shrine', cosy: lv(3, l => 3 + l * 2),
     base: { wood: 30, stone: 60 }, growth: 5.0, ethMul: 3.0, add: { 2: { bricks: 30, ingot: 5 }, 3: { bricks: 80, ingot: 20, crystal: 5 } },
     bonus: [0, 0.1, 0.2],
   },
   balloon_dock: {       // (the id is historic: it began as a balloon dock)
     name: 'Expedition Lodge', cat: 'core', size: [3, 3], max: 1, maxLevel: 4, models: ['trail_lodge', 'trail_lodge', 'trail_lodge_2', 'trail_lodge_2'], alt: 'balloon_dock', homeReq: [1, 2, 3, 4],
-    desc: 'Parties of Chainers set off from here to the frontier. Higher levels open new zones, more parties and better transport.', icon: 'trail_lodge', cosy: lv(4, () => 2),
+    desc: 'Send squads to the Frontier for loot. Upgrade it to unlock new zones, more squads and better transport.', icon: 'trail_lodge', cosy: lv(4, () => 2),
     base: { wood: 60, stone: 30 }, growth: 3.4, ethMul: 1.5, add: { 2: { planks: 12 }, 3: { planks: 35, bricks: 25, ingot: 4 }, 4: { planks: 80, bricks: 60, ingot: 16, crystal: 3 } },
     parallel: [2, 3, 4, 5], regions: [1, 2, 3, 4],
   },
   exchange: {
     name: 'Trading Post', cat: 'pool', size: [3, 2], max: 1, maxLevel: 3, models: ['exchange'], homeReq: [2, 3, 4], global: 'World Exchange',
-    desc: 'Your counter at the World Exchange, one market for all players. Swap one resource for another; prices move with supply.', icon: 'exchange', cosy: lv(3, () => 2),
+    desc: 'Your access to the World Exchange, one market for all players. Swap one resource for another. Prices change with supply.', icon: 'exchange', cosy: lv(3, () => 2),
     base: { wood: 90, stone: 60, planks: 6 }, growth: 3.5, ethMul: 1.2, add: { 3: { bricks: 40, ingot: 8 } },
     fee: [0.05, 0.04, 0.03],
   },
   rest_lodge: {
     name: 'Rest Lodge', cat: 'care', size: [2, 2], max: 1, maxLevel: 3, models: ['rest_lodge'], homeReq: [2, 3, 4],
-    desc: 'Tired Chainers recover faster after expeditions.', icon: 'rest_lodge', cosy: lv(3, l => 4 + l * 2),
+    desc: 'Chainers rest faster after expeditions.', icon: 'rest_lodge', cosy: lv(3, l => 4 + l * 2),
     base: { wood: 80, stone: 30, planks: 6 }, growth: 3.2, ethMul: 1.0, add: { 3: { bricks: 30, ingot: 6 } },
     rest: [0.2, 0.35, 0.5],
   },
   arena: {
     name: 'Training Ground', cat: 'care', size: [3, 3], max: 1, maxLevel: 3, models: ['arena'], homeReq: [3, 4, 5],
-    desc: 'Train your own Chainers to raise their stats.', icon: 'arena', cosy: lv(3, () => 3),
+    desc: 'Train your Chainers to raise their stats.', icon: 'arena', cosy: lv(3, () => 3),
     base: { wood: 120, stone: 120, planks: 15, bricks: 15 }, growth: 3.0, ethMul: 1.5, add: { 3: { ingot: 15, crystal: 3 } },
     trainCap: [3, 6, 10],
   },
@@ -204,34 +204,34 @@ export const BUILDINGS = {
     desc: 'Fresh water. Wanderers love it.', icon: 'well', cosy: [5], base: { stone: 45, wood: 15 }, growth: 1, ethMul: 0,
   },
   // ---- decorations ------------------------------------------------------------------------
-  decor_flowerbed: { name: 'Flower Bed', cat: 'decor', size: [1, 1], max: [3, 5, 8, 12, 16], maxLevel: 1, models: ['decor_flowerbed'], desc: 'A splash of colour.', icon: 'decor_flowerbed', cosy: [2], base: { wood: 8, bio: 15 }, growth: 1, ethMul: 0 },
+  decor_flowerbed: { name: 'Flower Bed', cat: 'decor', size: [1, 1], max: [3, 5, 8, 12, 16], maxLevel: 1, models: ['decor_flowerbed'], desc: 'Bright flowers.', icon: 'decor_flowerbed', cosy: [2], base: { wood: 8, bio: 15 }, growth: 1, ethMul: 0 },
   decor_bench:     { name: 'Bench', cat: 'decor', size: [1, 1], max: [1, 2, 3, 4, 6], maxLevel: 1, models: ['decor_bench'], desc: 'A place to sit and chat.', icon: 'decor_bench', cosy: [3], base: { wood: 25 }, growth: 1, ethMul: 0 },
-  decor_lantern:   { name: 'Lantern', cat: 'decor', size: [1, 1], max: [2, 3, 5, 7, 10], maxLevel: 1, models: ['decor_lantern'], desc: 'A warm glow at dusk.', icon: 'decor_lantern', cosy: [3], base: { wood: 12, stone: 12 }, growth: 1, ethMul: 0 },
-  decor_campfire:  { name: 'Campfire', cat: 'decor', size: [1, 1], max: [1, 1, 2, 2, 3], maxLevel: 1, models: ['decor_campfire'], desc: 'Crackling and cosy.', icon: 'decor_campfire', cosy: [4], base: { wood: 30, stone: 15 }, growth: 1, ethMul: 0 },
-  decor_hedge:     { name: 'Hedge', cat: 'decor', size: [1, 1], max: [4, 8, 12, 18, 24], maxLevel: 1, models: ['decor_hedge'], desc: 'Neatly trimmed.', icon: 'decor_hedge', cosy: [1], base: { bio: 12 }, growth: 1, ethMul: 0 },
+  decor_lantern:   { name: 'Lantern', cat: 'decor', size: [1, 1], max: [2, 3, 5, 7, 10], maxLevel: 1, models: ['decor_lantern'], desc: 'Warm light in the evening.', icon: 'decor_lantern', cosy: [3], base: { wood: 12, stone: 12 }, growth: 1, ethMul: 0 },
+  decor_campfire:  { name: 'Campfire', cat: 'decor', size: [1, 1], max: [1, 1, 2, 2, 3], maxLevel: 1, models: ['decor_campfire'], desc: 'A warm, cosy fire.', icon: 'decor_campfire', cosy: [4], base: { wood: 30, stone: 15 }, growth: 1, ethMul: 0 },
+  decor_hedge:     { name: 'Hedge', cat: 'decor', size: [1, 1], max: [4, 8, 12, 18, 24], maxLevel: 1, models: ['decor_hedge'], desc: 'A neat green hedge.', icon: 'decor_hedge', cosy: [1], base: { bio: 12 }, growth: 1, ethMul: 0 },
   fence:           { name: 'Fence', cat: 'decor', size: [1, 1], max: [8, 14, 20, 30, 40], maxLevel: 1, models: ['fence'], desc: 'Classic farm fence.', icon: 'fence', cosy: [0.5], base: { wood: 6 }, growth: 1, ethMul: 0 },
-  decor_signpost:  { name: 'Signpost', cat: 'decor', size: [1, 1], max: [1, 2, 2, 3, 3], maxLevel: 1, models: ['decor_signpost'], desc: 'This way home.', icon: 'decor_signpost', cosy: [2], base: { wood: 15 }, growth: 1, ethMul: 0 },
-  decor_scarecrow: { name: 'Scarecrow', cat: 'decor', size: [1, 1], max: [0, 1, 1, 2, 2], maxLevel: 1, models: ['decor_scarecrow'], desc: 'Keeps the crows guessing.', icon: 'decor_scarecrow', cosy: [4], base: { wood: 30, bio: 40 }, growth: 1, ethMul: 0 },
-  decor_arch:      { name: 'Flower Arch', cat: 'decor', size: [2, 1], max: [0, 1, 1, 2, 2], maxLevel: 1, models: ['decor_arch'], desc: 'A grand welcome.', icon: 'decor_arch', cosy: [6], base: { planks: 8, bio: 60 }, growth: 1, ethMul: 0 },
+  decor_signpost:  { name: 'Signpost', cat: 'decor', size: [1, 1], max: [1, 2, 2, 3, 3], maxLevel: 1, models: ['decor_signpost'], desc: 'Points the way home.', icon: 'decor_signpost', cosy: [2], base: { wood: 15 }, growth: 1, ethMul: 0 },
+  decor_scarecrow: { name: 'Scarecrow', cat: 'decor', size: [1, 1], max: [0, 1, 1, 2, 2], maxLevel: 1, models: ['decor_scarecrow'], desc: 'Scares the crows away.', icon: 'decor_scarecrow', cosy: [4], base: { wood: 30, bio: 40 }, growth: 1, ethMul: 0 },
+  decor_arch:      { name: 'Flower Arch', cat: 'decor', size: [2, 1], max: [0, 1, 1, 2, 2], maxLevel: 1, models: ['decor_arch'], desc: 'A flower gate for your guests.', icon: 'decor_arch', cosy: [6], base: { planks: 8, bio: 60 }, growth: 1, ethMul: 0 },
   decor_pond:      { name: 'Pond', cat: 'decor', size: [2, 2], max: [0, 0, 1, 1, 2], maxLevel: 1, models: ['decor_pond'], desc: 'Quiet water and lily pads.', icon: 'decor_pond', cosy: [9], base: { stone: 80, bio: 60 }, growth: 1, ethMul: 0 },
-  decor_fountain:  { name: 'Fountain', cat: 'decor', size: [2, 2], max: [0, 0, 1, 1, 1], maxLevel: 1, models: ['decor_fountain'], desc: 'The heart of a charming home.', icon: 'decor_fountain', cosy: [14], base: { bricks: 25, stone: 60 }, growth: 1, ethMul: 0, eth: 0.0015 },
-  decor_statue:    { name: 'Statue of Gleam', cat: 'decor', size: [1, 1], max: [0, 0, 0, 1, 1], maxLevel: 1, models: ['decor_statue'], desc: 'The little mechanical bird that broke formation.', icon: 'decor_statue', cosy: [18], base: { bricks: 30, ingot: 12 }, growth: 1, ethMul: 0, eth: 0.0040 },
-  decor_windmill:  { name: 'Windmill', cat: 'decor', size: [2, 2], max: [0, 0, 0, 1, 1], maxLevel: 1, models: ['decor_windmill'], desc: 'Turns lazily in the breeze.', icon: 'decor_windmill', cosy: [24], base: { planks: 40, bricks: 30, ingot: 8 }, growth: 1, ethMul: 0, eth: 0.0080 },
+  decor_fountain:  { name: 'Fountain', cat: 'decor', size: [2, 2], max: [0, 0, 1, 1, 1], maxLevel: 1, models: ['decor_fountain'], desc: 'A big boost to cosiness.', icon: 'decor_fountain', cosy: [14], base: { bricks: 25, stone: 60 }, growth: 1, ethMul: 0, eth: 0.0015 },
+  decor_statue:    { name: 'Statue of Gleam', cat: 'decor', size: [1, 1], max: [0, 0, 0, 1, 1], maxLevel: 1, models: ['decor_statue'], desc: 'Gleam, the little mechanical bird.', icon: 'decor_statue', cosy: [18], base: { bricks: 30, ingot: 12 }, growth: 1, ethMul: 0, eth: 0.0040 },
+  decor_windmill:  { name: 'Windmill', cat: 'decor', size: [2, 2], max: [0, 0, 0, 1, 1], maxLevel: 1, models: ['decor_windmill'], desc: 'Turns slowly in the wind.', icon: 'decor_windmill', cosy: [24], base: { planks: 40, bricks: 30, ingot: 8 }, growth: 1, ethMul: 0, eth: 0.0080 },
 };
 // The Build menu is ONE list, grouped by what a building is for. `use` says it in a few words.
 export const BUILD_GROUPS = [
   { id: 'food', name: 'Food', why: 'Biopoints feed every Chainer and Wanderer', icon: 'res_bio', types: ['farm_plot', 'granary'] },
   { id: 'people', name: 'Chainers and Wanderers', why: 'Visitors, rest and training', icon: 'ui_chainers', types: ['camp', 'well', 'rest_lodge', 'arena'] },
-  { id: 'materials', name: 'Materials', why: 'Turn Wood, Stone and Ore into building goods, and hold more', icon: 'res_planks', types: ['sawmill', 'stonecutter', 'smelter', 'warehouse'] },
+  { id: 'materials', name: 'Materials', why: 'Craft building materials and store more', icon: 'res_planks', types: ['sawmill', 'stonecutter', 'smelter', 'warehouse'] },
   { id: 'world', name: 'Frontier and world', why: 'Loot from expeditions, Crates for the Reward Pool, trade', icon: 'item_globe', types: ['balloon_dock', 'workshop', 'pool_shrine', 'exchange'] },
-  { id: 'cosy', name: 'Cosy decor', why: 'Raises cosiness, which brings better Wanderers more often', icon: 'ui_cosy',
+  { id: 'cosy', name: 'Cosy decor', why: 'More cosiness brings better Wanderers, more often', icon: 'ui_cosy',
     types: ['decor_flowerbed', 'decor_bench', 'decor_lantern', 'decor_campfire', 'decor_hedge', 'fence', 'decor_signpost', 'decor_scarecrow', 'decor_arch', 'decor_pond', 'decor_fountain', 'decor_statue', 'decor_windmill'] },
 ];
 export const BUILD_USE = {
   farm_plot: 'Grows Biopoints, the food', granary: 'Holds more Biopoints',
   camp: 'Wanderers come to stay and work', well: 'Wanderers love it: big cosiness', rest_lodge: 'Shorter rest after expeditions', arena: 'Train your Chainers\' stats',
-  sawmill: 'Wood into Planks', stonecutter: 'Stone into Bricks', smelter: 'Ore into Ingots', warehouse: 'Holds more of everything else',
-  balloon_dock: 'Send parties to the Frontier for loot', workshop: 'Packs resources into Crates', pool_shrine: 'Upload Crates, earn ETH', exchange: 'Swap one resource for another',
+  sawmill: 'Wood into Planks', stonecutter: 'Stone into Bricks', smelter: 'Ore into Ingots', warehouse: 'Holds more Wood, Stone and goods',
+  balloon_dock: 'Send squads to the Frontier for loot', workshop: 'Craft Crates from resources', pool_shrine: 'Upload Crates, earn ETH', exchange: 'Swap one resource for another',
 };
 // what to suggest when the current goal is not a building: the first of these you can build and do not have
 export const BUILD_NEXT = ['farm_plot', 'camp', 'balloon_dock', 'sawmill', 'stonecutter', 'workshop', 'pool_shrine', 'warehouse', 'granary', 'well', 'exchange', 'smelter', 'rest_lodge', 'arena'];
@@ -355,13 +355,13 @@ export const POI_TYPES = {
 // Environmental conditions that can sit on a point of interest.
 export const CONDITIONS = {
   fog:      { name: 'Thick Fog',      icon: 'item_compass',   desc: 'Hard to find the way: Wits count 50% more.',            stat: { wits: 1.5 } },
-  cliffs:   { name: 'Steep Climb',    icon: 'item_bolt',      desc: 'Exhausting: the team needs average Stamina 5 or loses 25% power.', staminaReq: 5, powerMul: 0.75 },
-  sun:      { name: 'Scorching Sun',  icon: 'item_hourglass', desc: 'They come back drained: rest takes 50% longer.',     restMul: 1.5 },
-  tailwind: { name: 'Fair Weather',   icon: 'item_feather',   desc: 'Easy walking: the journey is 30% shorter.',            timeMul: 0.7 },
-  bounty:   { name: 'Bountiful',      icon: 'item_star',      desc: 'Rich pickings: +40% loot.',                               lootMul: 1.4 },
-  patrol:   { name: 'Hostile Patrol', icon: 'item_sword',     desc: 'Perfect scouts nearby: Might counts 40% more, failure hurts more.', stat: { might: 1.4 }, restMul: 1.3 },
-  wards:    { name: 'Ancient Wards',  icon: 'item_clover',    desc: 'Old magic favours the fortunate: Luck counts double.',   luckMul: 2 },
-  mud:      { name: 'Deep Mud',       icon: 'item_backpack',  desc: 'Slow going: Agility counts 40% more, the walk is 20% longer.',  stat: { agility: 1.4 }, timeMul: 1.2 },
+  cliffs:   { name: 'Steep Climb',    icon: 'item_bolt',      desc: 'Hard climb: the squad needs average Stamina 5 or loses 25% power.', staminaReq: 5, powerMul: 0.75 },
+  sun:      { name: 'Scorching Sun',  icon: 'item_hourglass', desc: 'Very hot: rest takes 50% longer.',                   restMul: 1.5 },
+  tailwind: { name: 'Fair Weather',   icon: 'item_feather',   desc: 'Easy walk: the trip is 30% shorter.',                  timeMul: 0.7 },
+  bounty:   { name: 'Bonus Loot',     icon: 'item_star',      desc: 'This place gives +40% loot.',                             lootMul: 1.4 },
+  patrol:   { name: 'Hostile Patrol', icon: 'item_sword',     desc: 'Perfect scouts nearby: Might counts 40% more, rest takes 30% longer.', stat: { might: 1.4 }, restMul: 1.3 },
+  wards:    { name: 'Ancient Wards',  icon: 'item_clover',    desc: 'Old magic: Luck counts double.',                         luckMul: 2 },
+  mud:      { name: 'Deep Mud',       icon: 'item_backpack',  desc: 'Slow walk: Agility counts 40% more, the trip is 20% longer.',   stat: { agility: 1.4 }, timeMul: 1.2 },
 };
 export const CONDITION_KEYS = Object.keys(CONDITIONS);
 
@@ -380,18 +380,18 @@ export const APPROACH = {
 // Rented at the Expedition Lodge for one trip. speed multiplies walking speed; carry multiplies the haul.
 export const TRANSPORT = {
   foot:  { name: 'On foot',   icon: 'item_boots', speed: 1,    carry: 1,    cost: null,                    lodge: 1, model: null,        note: 'Free' },
-  mule:  { name: 'Pack mule', icon: 'item_mule',  speed: 1.35, carry: 1.1,  cost: { bio: 25 },             lodge: 1, model: 'pack_mule', note: '26% faster, +10% haul' },
-  wagon: { name: 'Wagon',     icon: 'item_wagon', speed: 1.8,  carry: 1.25, cost: { bio: 40, planks: 4 },  lodge: 2, model: 'wagon',     note: '45% faster, +25% haul' },
+  mule:  { name: 'Pack mule', icon: 'item_mule',  speed: 1.35, carry: 1.1,  cost: { bio: 25 },             lodge: 1, model: 'pack_mule', note: '26% faster, +10% loot' },
+  wagon: { name: 'Wagon',     icon: 'item_wagon', speed: 1.8,  carry: 1.25, cost: { bio: 40, planks: 4 },  lodge: 2, model: 'wagon',     note: '45% faster, +25% loot' },
 };
 // The lucky draw after every trip: three face-down cards, one pick. w = weight, luck adds to the good ones.
 export const LUCKY = {
-  haul:    { w: 30, name: 'Bigger haul',    icon: 'item_backpack', text: '+30% of everything they carried' },
-  bio:     { w: 22, name: 'Field rations',  icon: 'res_bio',       text: 'A sack of Biopoints' },
-  xp:      { w: 18, name: 'Campfire tales', icon: 'item_book',     text: 'Double experience for the team' },
-  goods:   { w: 14, name: 'Lost shipment',  icon: 'res_planks',    text: 'Planks and Bricks' },
-  crate:   { w: 8,  name: 'Sealed crate',   icon: 'item_crate_1',  text: 'A Relief Crate, ready for the pool' },
-  crystal: { w: 4,  name: 'Glint in the dirt', icon: 'res_crystal', text: 'A Crystal', lucky: 0.5 },
-  jackpot: { w: 1.5, name: 'Jackpot',       icon: 'item_trophy',   text: 'The whole haul again', lucky: 0.6 },
+  haul:    { w: 30, name: 'More loot',      icon: 'item_backpack', text: '+30% of all loot' },
+  bio:     { w: 22, name: 'Food pack',      icon: 'res_bio',       text: 'Bonus Biopoints' },
+  xp:      { w: 18, name: 'Bonus XP',       icon: 'item_book',     text: 'Double XP for the squad' },
+  goods:   { w: 14, name: 'Materials',      icon: 'res_planks',    text: 'Planks and Bricks' },
+  crate:   { w: 8,  name: 'Free Crate',     icon: 'item_crate_1',  text: 'A Relief Crate for the Reward Pool' },
+  crystal: { w: 4,  name: 'Crystal find',   icon: 'res_crystal',   text: 'A Crystal', lucky: 0.5 },
+  jackpot: { w: 1.5, name: 'Jackpot',       icon: 'item_trophy',   text: 'Double loot', lucky: 0.6 },
 };
 
 // ----------------------------------------------------------------------------------------------
@@ -400,17 +400,17 @@ export const LUCKY = {
 // ----------------------------------------------------------------------------------------------
 export const UPGRADES = {
   kitchen:   { name: 'Camp Kitchen',    icon: 'upg_kitchen',    alt: 'item_food_bowl', level: 2, needs: 'camp',        cost: { wood: 60, stone: 40, bio: 40 },
-    desc: 'Wanderers are fed on arrival from the camp larder. You decide how much food the larder holds.' },
+    desc: 'Feeds Wanderers automatically when they arrive. You set how much food it keeps.' },
   seeddrill: { name: 'Seed Drill',      icon: 'upg_seed_drill', alt: 'crop_sprout',    level: 2, needs: 'farm_plot',   cost: { wood: 80, stone: 30 },
-    desc: 'Every plot replants the same crop after a harvest.' },
+    desc: 'Farm Plots replant the same crop after each harvest.' },
   baskets:   { name: 'Harvest Baskets', icon: 'upg_baskets',    alt: 'item_basket',    level: 3, needs: 'farm_plot',   cost: { wood: 120, planks: 10 },
-    desc: 'Ripe crops are harvested into storage on their own, even while you are away.' },
+    desc: 'Ready crops are harvested automatically, even while you are away.' },
   bell:      { name: 'Foreman\'s Bell', icon: 'upg_bell',       alt: 'item_hammer',    level: 4, needs: null,          cost: { planks: 30, bricks: 30 },
-    desc: 'Sawmill, Stonecutter and Smelter keep working while you hold more than the reserve you set, and store what they make.' },
+    desc: 'Sawmill, Stonecutter and Smelter craft automatically and store what they make. You set how many resources to keep.' },
   crateline: { name: 'Crate Line',      icon: 'upg_crate_line', alt: 'item_crate_1',   level: 5, needs: 'workshop',    cost: { planks: 50, bricks: 50, ingot: 6 },
-    desc: 'The Workshop keeps assembling the crate you choose while resources last, and shelves them for you.' },
+    desc: 'The Workshop keeps crafting the Crate you pick while you have resources, and collects them for you.' },
   courier:   { name: 'Courier',         icon: 'upg_courier',    alt: 'item_eth',       level: 6, needs: 'pool_shrine', cost: { planks: 40, ingot: 10 },
-    desc: 'Finished Crates are carried to the Reward Pool and uploaded automatically.' },
+    desc: 'Finished Crates are uploaded to the Reward Pool automatically.' },
 };
 export const UPGRADE_ORDER = ['kitchen', 'seeddrill', 'baskets', 'bell', 'crateline', 'courier'];
 export const AUTO_DEFAULT = {
@@ -431,7 +431,7 @@ export const LEVEL_PERKS = {
   6: ['Home level 4', 'Courier'],
   8: ['Home level 5'],
 };
-export const XP_SOURCES = [['item_hammer', 'Build and upgrade'], ['res_bio', 'Harvest crops'], ['item_compass', 'Expeditions'], ['item_crate_1', 'Crates and the pool'], ['item_trophy', 'Goals'], ['item_axe', 'Clear land']];
+export const XP_SOURCES = [['item_hammer', 'Build and upgrade'], ['res_bio', 'Harvest crops'], ['item_compass', 'Expeditions'], ['item_crate_1', 'Crates and the pool'], ['item_trophy', 'Quests'], ['item_axe', 'Clear land']];
 
 // ----------------------------------------------------------------------------------------------
 // Reward pool + exchange
@@ -449,27 +449,27 @@ export const EXCHANGE = { depth: 16000, tickSec: 25, revert: 0.06, historyLen: 6
 export const xpForLevel = (l) => Math.round(40 * Math.pow(l, 1.7));
 
 export const QUESTS = [
-  { id: 'q_clear',   text: 'Tap a tree or rock so your Chainer clears it', goal: { cleared: 2 }, reward: { wood: 30, stone: 30 }, hint: 'clear' },
+  { id: 'q_clear',   text: 'Tap a tree or rock to clear it', goal: { cleared: 2 }, reward: { wood: 30, stone: 30 }, hint: 'clear' },
   { id: 'q_farm',    text: 'Build a Farm Plot', goal: { build: 'farm_plot' }, reward: { bio: 40 }, hint: 'build:farm_plot' },
   { id: 'q_plant',   text: 'Plant and harvest Carrots', goal: { harvest: 1 }, reward: { bio: 40, wood: 30 }, hint: 'farm' },
-  { id: 'q_fire',    text: 'Light a Campfire for your Wanderer Camp', goal: { build: 'decor_campfire' }, reward: { stone: 40, bio: 30 }, hint: 'build:decor_campfire' },
-  { id: 'q_feed',    text: 'Welcome a Wanderer with a meal', goal: { fed: 1 }, reward: { wood: 40, stone: 40 }, hint: 'camp' },
+  { id: 'q_fire',    text: 'Build a Campfire for your Wanderer Camp', goal: { build: 'decor_campfire' }, reward: { stone: 40, bio: 30 }, hint: 'build:decor_campfire' },
+  { id: 'q_feed',    text: 'Feed a Wanderer', goal: { fed: 1 }, reward: { wood: 40, stone: 40 }, hint: 'camp' },
   { id: 'q_dock',    text: 'Build the Expedition Lodge', goal: { build: 'balloon_dock' }, reward: { bio: 60 }, hint: 'build:balloon_dock' },
-  { id: 'q_exp',     text: 'Send a team on an expedition', goal: { expeditions: 1 }, reward: { wood: 50, stone: 50, bio: 50 }, hint: 'expedition' },
+  { id: 'q_exp',     text: 'Send a squad to the Frontier', goal: { expeditions: 1 }, reward: { wood: 50, stone: 50, bio: 50 }, hint: 'expedition' },
   { id: 'q_work',    text: 'Build the Crate Workshop', goal: { build: 'workshop' }, reward: { wood: 40, stone: 40 }, hint: 'build:workshop' },
-  { id: 'q_crate',   text: 'Assemble a Relief Crate', goal: { crates: 1 }, reward: { bio: 60 }, hint: 'workshop' },
+  { id: 'q_crate',   text: 'Craft a Relief Crate', goal: { crates: 1 }, reward: { bio: 60 }, hint: 'workshop' },
   { id: 'q_pool',    text: 'Build the Pool Shrine and upload a Crate', goal: { deposits: 1 }, reward: { wood: 60, stone: 60 }, hint: 'build:pool_shrine' },
-  { id: 'q_cosy',    text: 'Reach 20 Cosiness with decorations', goal: { cosy: 20 }, reward: { bio: 80, wood: 40 }, hint: 'build:decor_flowerbed' },
+  { id: 'q_cosy',    text: 'Reach 20 Cosiness with decor', goal: { cosy: 20 }, reward: { bio: 80, wood: 40 }, hint: 'build:decor_flowerbed' },
   { id: 'q_saw',     text: 'Build a Sawmill and a Stonecutter', goal: { buildAll: ['sawmill', 'stonecutter'] }, reward: { wood: 80, stone: 80 }, hint: 'build:sawmill' },
   { id: 'q_home2',   text: 'Upgrade the Chainer Home to level 2', goal: { level: ['home', 2] }, reward: { planks: 10, bricks: 10 }, hint: 'home' },
-  { id: 'q_supply',  text: 'Get the Camp Kitchen so Wanderers are fed for you', goal: { upg: 'kitchen' }, reward: { bio: 120 }, hint: 'supply' },
-  { id: 'q_xchg',    text: 'Build the Trading Post and make a swap', goal: { swaps: 1 }, reward: { ore: 20, bio: 80 }, hint: 'build:exchange' },
+  { id: 'q_supply',  text: 'Unlock the Camp Kitchen to auto-feed Wanderers', goal: { upg: 'kitchen' }, reward: { bio: 120 }, hint: 'supply' },
+  { id: 'q_xchg',    text: 'Build the Trading Post and swap resources', goal: { swaps: 1 }, reward: { ore: 20, bio: 80 }, hint: 'build:exchange' },
   { id: 'q_eth',     text: 'Earn your first ETH from the Reward Pool', goal: { ethEarned: 0.0000001 }, reward: { planks: 15, bricks: 15 }, hint: 'pool' },
-  { id: 'q_recruit', text: 'Buy a Wanderer you like with ETH', goal: { recruited: 1 }, reward: { bio: 200, planks: 20, bricks: 20 }, hint: 'camp' },
+  { id: 'q_recruit', text: 'Recruit a Wanderer with ETH', goal: { recruited: 1 }, reward: { bio: 200, planks: 20, bricks: 20 }, hint: 'camp' },
   { id: 'q_land',    text: 'Expand your land', goal: { land: 1 }, reward: { wood: 150, stone: 150 }, hint: 'land' },
-  { id: 'q_crate2',  text: 'Assemble a Sturdy Crate', goal: { crate2: 1 }, reward: { ingot: 5, bio: 150 }, hint: 'workshop' },
+  { id: 'q_crate2',  text: 'Craft a Sturdy Crate', goal: { crate2: 1 }, reward: { ingot: 5, bio: 150 }, hint: 'workshop' },
   { id: 'q_home3',   text: 'Upgrade the Chainer Home to level 3', goal: { level: ['home', 3] }, reward: { ingot: 8, crystal: 1 }, hint: 'home' },
-  { id: 'q_cosy2',   text: 'Reach 100 Cosiness — become Charming', goal: { cosy: 100 }, reward: { crystal: 3, bio: 300 }, hint: 'build:decor_fountain' },
+  { id: 'q_cosy2',   text: 'Reach 100 Cosiness (Charming)', goal: { cosy: 100 }, reward: { crystal: 3, bio: 300 }, hint: 'build:decor_fountain' },
 ];
 
 // The basic set: one Chainer, the Chainer Home and the Wanderer Camp (tile offset from the island centre).

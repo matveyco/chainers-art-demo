@@ -89,28 +89,28 @@ export class UI {
     bus.on('building:done', (b, isNew) => {
       this._hudDirty = true; this._modalDirty = true;
       const d = BUILDINGS[b.type];
-      this.toast(isNew ? `${d.name} built!` : `${d.name} is now level ${b.level}!`, 'good', d.icon);
+      this.toast(isNew ? `${d.name} built` : `${d.name} upgraded to level ${b.level}`, 'good', d.icon);
     });
     bus.on('chainer:change', () => { this._modalDirty = true; this._hudDirty = true; });
-    bus.on('levelup', (lvl, reward) => this.celebrate({ title: `Level ${lvl}!`, hero: 'item_star', text: 'Your homestead grows. A little gift from the Council:', loot: reward, sfx: 'levelup' }));
-    bus.on('guest:arrive', (c) => { this._hudDirty = true; this.toast(`${c.name}, a ${RARITY[c.rarity].name} Wanderer, has arrived!`, c.rarity === 'common' ? '' : 'good', 'item_flag'); });
+    bus.on('levelup', (lvl, reward) => this.celebrate({ title: `Level ${lvl}!`, hero: 'item_star', text: 'Homestead level up. Your reward:', loot: reward, sfx: 'levelup', button: 'Claim' }));
+    bus.on('guest:arrive', (c) => { this._hudDirty = true; this.toast(`New Wanderer: ${c.name} (${RARITY[c.rarity].name})`, c.rarity === 'common' ? '' : 'good', 'item_flag'); });
     bus.on('chainer:leave', (c, how, gift) => {
       this._hudDirty = true; this._modalDirty = true;
-      if (how === 'thanks') this.toast(`${c.name} moved on and left a thank-you gift`, 'good', resIcon(Object.keys(gift)[0]));
-      else if (how === 'hungry') this.toast(`${c.name} left hungry… cosiness dropped`, 'bad', 'item_heart');
-      else this.toast(`${c.name} was sent away. Cosiness dropped a little`, 'bad', 'item_heart');
+      if (how === 'thanks') this.toast(`${c.name} left and gave you a gift`, 'good', resIcon(Object.keys(gift)[0]));
+      else if (how === 'hungry') this.toast(`${c.name} left hungry. Cosiness dropped`, 'bad', 'item_heart');
+      else this.toast(`${c.name} dismissed. Cosiness dropped a little`, 'bad', 'item_heart');
     });
-    bus.on('chainer:levelup', (c) => this.toast(`${c.name} reached level ${c.level}!`, 'good', 'item_star'));
+    bus.on('chainer:levelup', (c) => this.toast(`Level up! ${c.name} is now level ${c.level}`, 'good', 'item_star'));
     bus.on('chainer:trained', (c, stat) => this.toast(`${c.name} trained ${STATS[stat].name} +1`, 'good', STATS[stat].icon));
-    bus.on('hungry', (h) => { this._hudDirty = true; if (h) this.toast('Out of Biopoints! Your Chainers are hungry and weaker', 'bad', 'res_bio'); });
+    bus.on('hungry', (h) => { this._hudDirty = true; if (h) this.toast('No Biopoints left. Hungry Chainers are weaker', 'bad', 'res_bio'); });
     for (const ev of ['exp:launch', 'exp:claimed', 'exp:change', 'building:done', 'pois']) bus.on(ev, () => { this._hudDirty = true; this._sideDirty = true; if (this.mode === 'frontier') this.renderExpBar(); });
-    bus.on('exp:back', (e) => { this._hudDirty = true; this._sideDirty = true; this.toast(`The party is back from ${POI_TYPES[e.poi.type].name}. Open the chest!`, 'good', 'item_chest'); this.sfx.play('return'); });
-    bus.on('exp:phase', (e, ph) => { this._hudDirty = true; this._sideDirty = true; if (ph === 'work') this.toast(`The party reached ${POI_TYPES[e.poi.type].name}`, '', 'item_compass'); });
+    bus.on('exp:back', (e) => { this._hudDirty = true; this._sideDirty = true; this.toast(`Squad is back from ${POI_TYPES[e.poi.type].name}. Loot ready!`, 'good', 'item_chest'); this.sfx.play('return'); });
+    bus.on('exp:phase', (e, ph) => { this._hudDirty = true; this._sideDirty = true; if (ph === 'work') this.toast(`Squad reached ${POI_TYPES[e.poi.type].name}`, '', 'item_compass'); });
     bus.on('upgrade', () => { this._hudDirty = true; this._modalDirty = true; });
     bus.on('auto', () => { this._modalDirty = true; });
     bus.on('season', () => { this._hudDirty = true; });
     bus.on('pool:payout', (rec) => {
-      this.celebrate({ title: 'Pool paid out!', titleCls: 'eth', hero: 'item_eth', text: `Your ${fmt(rec.points)} points were ${(rec.points / rec.total * 100).toFixed(1)}% of the round.`, loot: { eth: rec.eth }, sfx: 'payout' });
+      this.celebrate({ title: 'Pool payout!', titleCls: 'eth', hero: 'item_eth', text: `Your ${fmt(rec.points)} points were ${(rec.points / rec.total * 100).toFixed(1)}% of the round.`, loot: { eth: rec.eth }, sfx: 'payout', button: 'Claim' });
       this._hudDirty = true;
     });
     bus.on('pool:deposit', (pts) => { this.toast(`+${fmt(pts)} pool points uploaded`, 'eth', 'item_eth'); this.sfx.play('coin'); });
@@ -157,7 +157,7 @@ export class UI {
     const crates = s.crates.crate1 + s.crates.crate2 + s.crates.crate3;
     if (crates) chips += `<div class="chip" id="chip-crate" title="Crates ready for the Reward Pool">${ic('item_crate_1', 30)}<span>${crates}</span></div>`;
     const res = `<div class="res-wrap"><div class="respill" data-act="open" data-panel="storage" role="button" aria-label="Storage">${chips}</div>
-      <div class="chip eth" id="chip-eth" data-act="open" data-panel="pool" role="button" title="ETH — earned only from the Reward Pool">${ic('item_eth', 30)}<span>${fmtEth(s.eth, 5)}</span><small>ETH</small></div></div>`;
+      <div class="chip eth" id="chip-eth" data-act="open" data-panel="pool" role="button" title="ETH. Earned only from the Reward Pool">${ic('item_eth', 30)}<span>${fmtEth(s.eth, 5)}</span><small>ETH</small></div></div>`;
     // --- sticker navigation --------------------------------------------------------------------
     const hungryGuests = g.guests().filter(c => !c.fed).length;
     const now = g.now();
@@ -175,11 +175,11 @@ export class UI {
     const hasPool = !!g.first('pool_shrine'), hasEx = !!g.first('exchange');
     const left = home
       ? sb('data-act="open" data-panel="roster"', 'ui_chainers', 'Chainers', hungryGuests)
-        + sb('data-act="open" data-panel="level"', 'ui_goals', 'Goals', pr && pr.done ? '!' : 0)
+        + sb('data-act="open" data-panel="level"', 'ui_goals', 'Quests', pr && pr.done ? '!' : 0)
         + sb('data-act="open" data-panel="supply"', 'ui_supply', 'Supply', 0, '', 'Supply lines', 'ui_storage')
-        + sb('data-act="open" data-panel="pool"', 'ui_pool', 'Pool', hasPool ? crates : 0, hasPool ? '' : 'locked', hasPool ? 'World Reward Pool' : 'World Reward Pool, build a Pool Shrine to reach it')
-        + sb('data-act="open" data-panel="exchange"', 'ui_exchange', 'Trade', 0, hasEx ? '' : 'locked', hasEx ? 'World Exchange' : 'World Exchange, build a Trading Post to reach it')
-      : sb('data-act="goHome"', 'item_house', 'Home', 0, '', 'Back to the homestead', 'ui_storage');
+        + sb('data-act="open" data-panel="pool"', 'ui_pool', 'Pool', hasPool ? crates : 0, hasPool ? '' : 'locked', hasPool ? 'World Reward Pool' : 'World Reward Pool. Locked: build a Pool Shrine')
+        + sb('data-act="open" data-panel="exchange"', 'ui_exchange', 'Trade', 0, hasEx ? '' : 'locked', hasEx ? 'World Exchange' : 'World Exchange. Locked: build a Trading Post')
+      : sb('data-act="goHome"', 'item_house', 'Home', 0, '', 'Back to the Homestead', 'ui_storage');
     const snd = !!s.settings.sfx;
     const soundBtn = sb(`data-act="sound" aria-pressed="${snd}"`, snd ? 'ui_sound_on' : 'ui_sound_off', snd ? 'Sound' : 'Muted', 0, snd ? '' : 'muted', snd ? 'Sound is on. Tap to mute' : 'Sound is off. Tap to turn it on');
     const right = soundBtn + seasonBtn + (home ? sb('data-act="open" data-panel="storage"', 'ui_storage', 'Storage', 0, 'opt') : '')
@@ -199,13 +199,13 @@ export class UI {
     let side = '';
     if (q && home) {
       side += `<button class="quest ${pr.done ? 'ready' : ''}" data-act="quest">
-        <div class="t"><span>${pr.done ? 'Goal complete. Tap to claim' : `Goal ${s.quest.idx + 1} / ${QUESTS.length}`}</span>${pr.done ? '' : `<i>${fmt(pr.cur)} / ${fmt(pr.max)}</i>`}</div>
+        <div class="t"><span>${pr.done ? 'Quest complete! Tap to claim' : `Quest ${s.quest.idx + 1} / ${QUESTS.length}`}</span>${pr.done ? '' : `<i>${fmt(pr.cur)} / ${fmt(pr.max)}</i>`}</div>
         <div class="d">${esc(q.text)}</div>
         <div class="bar ${pr.done ? 'green' : ''}"><i style="width:${pr.cur / pr.max * 100}%"></i></div>
-        <div class="rw"><small>Reward</small>${Object.entries(q.reward).map(([k, v]) => `<span>${ic(resIcon(k), 22)}${fmt(v)}</span>`).join('')}<em>${pr.done ? 'Claim' : 'Show me'}</em></div>
+        <div class="rw"><small>Reward</small>${Object.entries(q.reward).map(([k, v]) => `<span>${ic(resIcon(k), 22)}${fmt(v)}</span>`).join('')}<em>${pr.done ? 'Claim' : 'Go'}</em></div>
       </button>`;
     }
-    if (s.hungry && home) side += `<button class="mini alert" data-act="hint" data-hint="farm">${ic('res_bio', 26)}<span><b>Hungry Chainers!</b> Harvest crops for Biopoints</span></button>`;
+    if (s.hungry && home) side += `<button class="mini alert" data-act="hint" data-hint="farm">${ic('res_bio', 26)}<span><b>Chainers are hungry.</b> Harvest crops for Biopoints</span></button>`;
     this._set('hud-left', side);
     // --- parties on the frontier: always in sight ------------------------------------------------
     this._set('hud-track', FRONTIER_UI.tracker(this));
@@ -223,8 +223,8 @@ export class UI {
     // the two verbs of the game, always under the thumb: explore (loot and resources) and build
     const lodge = !!g.lodge(), wantFr = q && !pr.done && /frontier|exped/.test(q.hint || '');
     this._set('hud-right', home ? `<div class="tools">
-      <button class="tool fr ${lodge ? '' : 'locked'} ${back || wantFr ? 'nudge' : ''}" data-act="expeditions" aria-label="${lodge ? `Frontier: send a party for loot and resources${back ? `. ${back} chest waiting` : ''}` : 'Frontier, build the Expedition Lodge to open it'}">
-        ${ic('ui_expeditions', 54, '', 'item_compass')}<span>Frontier</span><small>${back ? 'Chest waiting!' : lodge ? 'Loot & resources' : 'Build the Lodge'}</small>${back ? `<i class="dot">${back}</i>` : ''}${lodge ? '' : `<i class="lock">${ic('item_lock', 22)}</i>`}</button>
+      <button class="tool fr ${lodge ? '' : 'locked'} ${back || wantFr ? 'nudge' : ''}" data-act="expeditions" aria-label="${lodge ? `Frontier: send a squad for loot and resources${back ? `. Loot ready: ${back}` : ''}` : 'Frontier. Locked: build the Expedition Lodge'}">
+        ${ic('ui_expeditions', 54, '', 'item_compass')}<span>Frontier</span><small>${back ? 'Loot ready!' : lodge ? 'Loot & resources' : 'Build the Lodge'}</small>${back ? `<i class="dot">${back}</i>` : ''}${lodge ? '' : `<i class="lock">${ic('item_lock', 22)}</i>`}</button>
       <button class="tool ${wantBuild ? 'nudge' : ''}" data-act="open" data-panel="build" aria-label="Build">
         ${ic('ui_build', 54, '', 'item_hammer')}<span>Build</span><small>Buildings & decor</small></button></div>` : '');
     this.root.classList.toggle('has-side', !!(this.plan || this.partyId));
@@ -256,8 +256,10 @@ export class UI {
       if (n.sig !== sig) { n.sig = sig; n.el.className = 'mk ' + m.kind + (m.bounce ? ' bounce' : '') + (m.alert ? ' alert' : '') + (m.pulse ? ' pulse' : '') + (m.small ? ' small' : '') + (m.up ? ' up' : '') + (m.sel ? ' sel' : '') + (m.phase ? ' ' + m.phase : ''); n.el.innerHTML = this._mkHtml(m); }
       else if (m.kind === 'timer' || m.kind === 'pool' || m.kind === 'poi' || m.kind === 'party' || m.kind === 'tag') this._mkLive(n.el, m);
       const p = this.engine.toScreen(m.x, m.y, m.z);
-      if (!p || hide) { n.el.style.display = 'none'; continue; }
-      n.el.style.display = '';
+      // hidden with `visibility`, never `display`: coming back from display:none restarts the pop-in of every bubble
+      // each time a panel closes or a marker scrolls back on screen
+      if (!p || hide) { if (!n.off) { n.off = true; n.el.style.visibility = 'hidden'; } continue; }
+      if (n.off) { n.off = false; n.el.style.visibility = ''; }
       n.el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px)`;
       n.el.style.zIndex = String(Math.round(p.y));
     }
@@ -299,13 +301,13 @@ export class UI {
   statusOf(c) {
     const g = this.game, now = g.now();
     switch (c.status) {
-      case 'expedition': { const e = g.s.expeditions.find(x => x.id === c.expId); return e ? `On the frontier: ${POI_TYPES[e.poi.type].name}` : 'On the frontier'; }
+      case 'expedition': { const e = g.s.expeditions.find(x => x.id === c.expId); return e ? `On the Frontier: ${POI_TYPES[e.poi.type].name}` : 'On the Frontier'; }
       case 'rest': return `Resting ${fmtTime(c.restUntil - now)}`;
       case 'job': { const b = g.building(c.jobAt); return `Working at the ${b ? BUILDINGS[b.type].name : 'job'}`; }
       case 'build': { const b = g.building(c.jobAt); return `Helping build the ${b ? BUILDINGS[b.type].name : 'site'}`; }
       case 'clearing': return 'Clearing land';
       case 'train': return `Training ${fmtTime(c.busyUntil - now)}`;
-      default: return c.owned || c.fed ? 'Idle. Waiting for orders' : 'Hungry. Feed them or they leave';
+      default: return c.owned || c.fed ? 'Free. Ready for orders' : 'Hungry. Feed them or they leave';
     }
   }
 
@@ -326,6 +328,7 @@ export class UI {
   flyLoot(pos, got, screen = false) {
     const from = screen ? pos : this.engine.toScreen(pos.x, pos.y, pos.z);
     if (!from) return;
+    if (!screen) this.fx.loot(pos.x, pos.y, pos.z, got);      // chunks in the colour of the goods jump up where they were earned
     let i = 0;
     for (const k in got) {
       if (k.startsWith('_') || !got[k]) continue;
@@ -364,7 +367,7 @@ export class UI {
       }
       i++;
     }
-    if (got._full) this.toast('Storage is full — some was left behind. Upgrade your Warehouse or Granary', 'bad');
+    if (got._full) this.toast('Storage is full. Some was lost. Upgrade the Warehouse or Granary', 'bad');
   }
   /** A paper ribbon that names the new season while the world turns. */
   seasonBanner(id) {
@@ -374,7 +377,7 @@ export class UI {
     const b = document.createElement('div');
     b.id = 'season-banner'; b.className = id;
     b.setAttribute('role', 'status');
-    b.innerHTML = `<img src="${iconUrl(S.icon)}" alt="" draggable="false"><div><small>The season turns</small><b>${S.name}</b></div>`;
+    b.innerHTML = `<img src="${iconUrl(S.icon)}" alt="" draggable="false"><div><small>New season</small><b>${S.name}</b></div>`;
     this.root.appendChild(b);
     setTimeout(() => b.remove(), 2700);
   }
@@ -390,8 +393,13 @@ export class UI {
     this.root.appendChild(d);
     this._celeb = { el: d, c };
     this.sfx.play(c.sfx || 'success');
-    const cx = this.engine.rig.cur;
-    if (!c.quiet) this.fx.burst('confetti', cx.x, cx.y + 3, cx.z, 40, 1.8);
+    if (!c.quiet) {
+      this.fx.cannons();      // two poppers either side of the card, in the world
+      // and paper confetti in front of the card: on a phone the card and its backdrop cover the world's poppers
+      const cols = ['#f2a93b', '#c8321c', '#5e6c1f', '#343c6d', '#fffbe8', '#f8cf86'];
+      const bits = Array.from({ length: 26 }, (_, i) => { const side = i % 2 ? 1 : -1; return `<i style="--x:${(side * (30 + Math.random() * 150)).toFixed(0)}px;--y:${(-(120 + Math.random() * 260)).toFixed(0)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;--d:${(0.9 + Math.random() * 0.7).toFixed(2)}s;--w:${(7 + Math.random() * 7).toFixed(0)}px;left:${side < 0 ? 8 : 92}%;background:${cols[i % cols.length]};animation-delay:${(0.12 + Math.random() * 0.25).toFixed(2)}s"></i>`; }).join('');
+      d.insertAdjacentHTML('beforeend', `<div class="cconf" aria-hidden="true">${bits}</div>`);
+    }
   }
   closeCelebration() {
     const c = this._celeb;
@@ -471,7 +479,7 @@ export class UI {
     const d = BUILDINGS[type];
     this.closeCtx();
     this.home.beginPlace(type, moveId, this._ptr);
-    this.setBar(`<div id="placebar">${ic(d.icon, 40, '', d.alt || '')}<div><b>${moveId ? 'Moving the' : 'Placing the'} ${d.name}</b><div class="muted">${this.home.place && this.home.place.follow ? 'Move the mouse, click to set it down' : 'Drag it, or tap the ground'}</div></div></div>`);
+    this.setBar(`<div id="placebar">${ic(d.icon, 40, '', d.alt || '')}<div><b>${moveId ? 'Moving the' : 'Placing the'} ${d.name}</b><div class="muted">${this.home.place && this.home.place.follow ? 'Move the mouse. Click to place' : 'Drag it or tap the ground'}</div></div></div>`);
     this._ppSig = null;
     this._chrome(false);
   }
@@ -490,7 +498,7 @@ export class UI {
       const ROT = '<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 3v5h-5"/></svg>';
       const X = '<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
       el.innerHTML = p.follow
-        ? `<div class="pp-in hint">${p.ok ? 'Click to set it down' : esc(p.why || 'Not here')}</div>`
+        ? `<div class="pp-in hint">${p.ok ? 'Click to place' : esc(p.why || 'Not here')}</div>`
         : `<div class="pp-in"><button class="pp-b" data-act="placeRotate" aria-label="Rotate">${ic('item_rotate', 34)}<span class="fb">${ROT}</span></button>
             <button class="pp-go" data-act="placeConfirm" ${p.ok ? '' : 'disabled'}>${p.ok ? `<b>${ic('item_check', 26)}${p.moveId ? 'Move here' : 'Build here'}</b>${cost ? this.costHtml(cost, { noTime: true }) : ''}` : `<b>Can't build here</b><small>${esc(p.why || 'Something is in the way')}</small>`}</button>
             <button class="pp-b x2" data-act="placeCancel" aria-label="Cancel">${ic('item_cancel', 34)}<span class="fb">${X}</span></button></div>`;
@@ -554,7 +562,7 @@ export class UI {
     const g = this.game;
     this.setBar(`<div id="expbar"><div class="rtabs" role="group" aria-label="Zones">
       ${REGIONS.map(r => `<button class="rtab ${g.regionOpen(r) ? '' : 'lock'}" data-act="zone" data-id="${r.id}">${g.regionOpen(r) ? '' : ic('item_lock', 16)}<span><b>${r.name}</b><small>${g.regionOpen(r) ? `${g.s.pois[r.id].length} places open` : `Lodge level ${r.dock}`}</small></span></button>`).join('')}</div>
-      <span class="out">${ic('item_compass', 24)} ${g.s.expeditions.length} / ${g.parallelMax()} parties out</span></div>`);
+      <span class="out">${ic('item_compass', 24)} ${g.s.expeditions.length} / ${g.parallelMax()} squads out</span></div>`);
   }
   // ---- the two side sheets of the frontier: plan a trip, follow a party ---------------------------
   renderSide() {
@@ -580,7 +588,7 @@ export class UI {
     const g = this.game, poi = g.findPoi(id);
     if (!poi) return;
     const reg = REGIONS.find(r => r.id === poi.region);
-    if (!g.regionOpen(reg)) { this.toast(`${reg.name} opens when your Expedition Lodge reaches level ${reg.dock}`, 'bad', 'item_lock'); return; }
+    if (!g.regionOpen(reg)) { this.toast(`${reg.name} is locked. Upgrade the Expedition Lodge to level ${reg.dock}`, 'bad', 'item_lock'); return; }
     this.partyId = null;
     this.plan = { id, team: g.bestTeam(poi), approach: 'balanced', transport: 'foot' };
     this.sfx.play('open');
@@ -699,11 +707,11 @@ export class UI {
     this._how = {
       i: 0, then,
       cards: [
-        { h: 'Build your homestead', p: 'Tap a tree or a rock and a Chainer clears it. Press Build to put things up, then upgrade them.', pic: flow(it('item_axe', 'Clear'), it('home_1', 'Build'), it('item_arrow_up', 'Upgrade', 'item_star')) },
-        { h: 'Chainers do the work', p: 'Tap any Chainer for a card of orders. A navy name tag is yours. A cream one is a Wanderer who is only visiting.', pic: flow(it('ui_chainers', 'Tap a Chainer'), `<span class="hstack">${it('item_hammer', 'Work')}${it('ui_build', 'Build', 'item_hammer')}${it('item_compass', 'Explore')}</span>`) },
-        { h: 'Feed everyone', p: 'Farms grow Biopoints and everybody eats. A hungry Wanderer leaves. A fed one stays and works for you.', pic: flow(it('farm_plot', 'Farm'), it('res_bio', 'Biopoints'), it('item_food_bowl', 'Fed and happy')) },
-        { h: 'Explore the Frontier', p: 'Send a party through your gate for Wood, Stone, Ore and lucky finds. Open the chest when they are back.', pic: flow(it('ui_expeditions', 'Frontier', 'item_compass'), it('item_boots', 'They walk', 'item_compass'), it('chest_gold', 'Chest', 'item_chest')) },
-        { h: 'Crates earn ETH', p: 'Pack resources into Crates and upload them to the world Reward Pool. It pays ETH every 30 minutes. ETH is the only way to keep a Wanderer for good.', pic: flow(it('item_crate_1', 'Crates'), it('ui_pool', 'Reward Pool'), it('item_eth', 'ETH'), it('ui_wanderer', 'Recruit', 'ui_chainers')) },
+        { h: 'Build your Homestead', p: 'Tap a tree or a rock and a Chainer clears it. Tap Build to place buildings, then upgrade them.', pic: flow(it('item_axe', 'Clear'), it('home_1', 'Build'), it('item_arrow_up', 'Upgrade', 'item_star')) },
+        { h: 'Chainers do the work', p: 'Tap a Chainer to give orders. A navy name tag is your Chainer. A cream tag is a Wanderer, a visitor.', pic: flow(it('ui_chainers', 'Tap a Chainer'), `<span class="hstack">${it('item_hammer', 'Work')}${it('ui_build', 'Build', 'item_hammer')}${it('item_compass', 'Explore')}</span>`) },
+        { h: 'Feed everyone', p: 'Farms grow Biopoints. Everyone eats them. A hungry Wanderer leaves. A fed Wanderer stays and works for you.', pic: flow(it('farm_plot', 'Farm'), it('res_bio', 'Biopoints'), it('item_food_bowl', 'Fed and happy')) },
+        { h: 'Explore the Frontier', p: 'Send a squad for Wood, Stone, Ore and lucky finds. Claim the loot when they are back.', pic: flow(it('ui_expeditions', 'Frontier', 'item_compass'), it('item_boots', 'Send squad', 'item_compass'), it('chest_gold', 'Claim loot', 'item_chest')) },
+        { h: 'Crates earn ETH', p: 'Craft Crates from resources and upload them to the Reward Pool. It pays ETH every 30 minutes. ETH is the only way to recruit a Wanderer.', pic: flow(it('item_crate_1', 'Crates'), it('ui_pool', 'Reward Pool'), it('item_eth', 'ETH'), it('ui_wanderer', 'Recruit', 'ui_chainers')) },
       ],
     };
     this.closeModal(); this.closeCtx();
@@ -715,13 +723,13 @@ export class UI {
     if (!H) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'howto'; this.root.appendChild(el); }
     const c = H.cards[H.i], last = H.i === H.cards.length - 1;
-    el.innerHTML = `<div class="hcard" role="dialog" aria-label="How the game works, ${H.i + 1} of ${H.cards.length}">
+    el.innerHTML = `<div class="hcard" role="dialog" aria-label="How to play, ${H.i + 1} of ${H.cards.length}">
       <button class="skip" data-act="howSkip">Skip</button>
       <div class="hpic n${H.i + 1}">${c.pic}</div>
-      <small>How it works · ${H.i + 1} of ${H.cards.length}</small>
+      <small>How to play · ${H.i + 1} of ${H.cards.length}</small>
       <h2>${c.h}</h2><p>${c.p}</p>
       <div class="hdots" aria-hidden="true">${H.cards.map((_, i) => `<i class="${i === H.i ? 'on' : i < H.i ? 'done' : ''}"></i>`).join('')}</div>
-      <div class="hrow">${H.i ? '<button class="btn ghost" data-act="howBack">Back</button>' : ''}<button class="btn green big" data-act="howNext">${last ? "Let's play" : 'Next'}</button></div></div>`;
+      <div class="hrow">${H.i ? '<button class="btn ghost" data-act="howBack">Back</button>' : ''}<button class="btn green big" data-act="howNext">${last ? "Play" : 'Next'}</button></div></div>`;
   }
   howStep(d) {
     const H = this._how;
@@ -734,13 +742,13 @@ export class UI {
   coachNext(skip) { if (!this._coach) return; if (skip) this._coach.i = 1e9; else this._coach.i++; this._coachShow(); }
   tour() {
     this.coach([
-      { sel: '#hud-left .quest', title: 'Your next goal', text: 'Follow these and you see every part of the game. Tap the card and it takes you to the right place.' },
-      { sel: '#hud-right .tool:not(.fr)', title: 'Build', text: 'One list of everything you can put up: what it is for, what it costs and exactly why something is still locked. The top card is what to build next.' },
-      { sel: '#hud-right .tool.fr', title: 'Frontier', text: 'Where loot and resources come from. Build the Expedition Lodge, then send a party and open the chest when they are back.' },
-      { sel: '.snav [data-act="sound"]', title: 'Sound', text: 'One tap mutes everything, one more brings it back.' },
-      { sel: '.snav [data-panel="roster"]', title: 'Your Chainers', text: 'Or simply tap a Chainer in the yard: you get a card with everything you can tell them to do.' },
-      { sel: '.snav [data-panel="supply"]', title: 'Supply lines', text: 'Upgrades that make the homestead run itself: feeding Wanderers, replanting, harvesting, crafting.' },
-      { sel: '.snav [data-panel="level"]', title: 'Goals and level', text: 'Your Homestead level, how to earn experience, what each level opens and a list of what to do next.' },
+      { sel: '#hud-left .quest', title: 'Your next quest', text: 'Quests teach you the game and give rewards. Tap the card to go to the right place.' },
+      { sel: '#hud-right .tool:not(.fr)', title: 'Build', text: 'All buildings in one list: what each one does, what it costs and how to unlock it. The top card is what to build next.' },
+      { sel: '#hud-right .tool.fr', title: 'Frontier', text: 'Loot and resources come from here. Build the Expedition Lodge, send a squad and claim the loot when they are back.' },
+      { sel: '.snav [data-act="sound"]', title: 'Sound', text: 'Tap to mute. Tap again to turn the sound on.' },
+      { sel: '.snav [data-panel="roster"]', title: 'Your Chainers', text: 'All your Chainers and Wanderers. You can also tap a Chainer in the yard to give orders.' },
+      { sel: '.snav [data-panel="supply"]', title: 'Supply lines', text: 'Upgrades that automate your Homestead: feeding Wanderers, replanting, harvesting, crafting.' },
+      { sel: '.snav [data-panel="level"]', title: 'Quests and level', text: 'Your Homestead level, how to earn XP, what each level unlocks and what to do next.' },
     ]);
   }
 

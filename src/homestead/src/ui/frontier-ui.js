@@ -3,7 +3,7 @@ import { REGIONS, POI_TYPES, ACTIVITIES, CONDITIONS, STATS, APPROACH, TRANSPORT,
 import { fmt, fmtTime, clamp } from '../core/util.js';
 import { ic, resIcon, resName, esc } from './ui.js';
 
-const PHASE = { out: 'On the way', work: 'At work', back: 'Heading home', home: 'Back!' };
+const PHASE = { out: 'On the way', work: 'At work', back: 'Heading home', home: 'Loot ready' };
 const danger = (poi) => clamp(Math.round((poi.hard - 0.8) / 0.9 * 4) + 1, 1, 5);
 const pips = (poi) => `<span class="diff" title="Danger ${danger(poi)} of 5">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= danger(poi) ? 'on' : ''}"></i>`).join('')}</span>`;
 const lootRange = (loot, mul = 1) => Object.entries(loot).map(([k, [a, b]]) => `<span title="${resName(k)}">${ic(resIcon(k), 26)}<b>${fmt(Math.round(a * mul))}–${fmt(Math.round(b * mul))}</b></span>`).join('');
@@ -31,7 +31,7 @@ export const FRONTIER_UI = {
   partyPin(ui, m) {
     const home = m.phase === 'home';
     return `<div class="in"><button class="ppin ${m.phase}" data-act="${home ? 'claimExp' : 'partyOpen'}" data-id="${m.id}">
-      ${faces(ui, m.exp)}<span class="tx"><b>${home ? 'Open chest' : PHASE[m.phase]}</b>${home ? '' : `<small class="tm">${fmtTime(m.left)}</small>`}</span>${home ? '' : `<span class="ride">${ic((TRANSPORT[m.exp.transport] || TRANSPORT.foot).icon, 30, '', 'item_backpack')}</span>`}</button></div>`;
+      ${faces(ui, m.exp)}<span class="tx"><b>${home ? 'Claim loot' : PHASE[m.phase]}</b>${home ? '' : `<small class="tm">${fmtTime(m.left)}</small>`}</span>${home ? '' : `<span class="ride">${ic((TRANSPORT[m.exp.transport] || TRANSPORT.foot).icon, 30, '', 'item_backpack')}</span>`}</button></div>`;
   },
   zonePin(ui, m) { return `<div class="in"><div class="zpin ${m.open ? '' : 'locked'}">${m.open ? '' : ic('item_lock', 18)}<b>${m.reg.name}</b>${m.open ? '' : `<small>Lodge level ${m.reg.dock}</small>`}</div></div>`; },
 
@@ -39,12 +39,12 @@ export const FRONTIER_UI = {
   tracker(ui) {
     const g = ui.game, now = g.now();
     if (!g.s.expeditions.length) return '';
-    return `<div class="trk-col" aria-label="Parties on the frontier">${g.s.expeditions.map((e) => {
+    return `<div class="trk-col" aria-label="Squads on the Frontier">${g.s.expeditions.map((e) => {
       const T = POI_TYPES[e.poi.type], ph = g.expPhase(e, now), home = ph.phase === 'home';
       return `<button class="trk ${ph.phase}" data-act="${home ? 'claimExp' : 'partyOpen'}" data-id="${e.id}">
         ${faces(ui, e)}
-        <span class="tx"><b>${T.name}</b><small>${home ? 'Back at the gate' : esc(g.expStatus(e, now))}</small>${seg(g, e)}</span>
-        <span class="eta">${home ? ic('chest_wood', 34, '', 'item_chest') + '<em>Open</em>' : `<em>${PHASE[ph.phase]}</em><i>${fmtTime(ph.left)}</i>`}</span>
+        <span class="tx"><b>${T.name}</b><small>${home ? 'Loot ready!' : esc(g.expStatus(e, now))}</small>${seg(g, e)}</span>
+        <span class="eta">${home ? ic('chest_wood', 34, '', 'item_chest') + '<em>Claim</em>' : `<em>${PHASE[ph.phase]}</em><i>${fmtTime(ph.left)}</i>`}</span>
       </button>`;
     }).join('')}</div>`;
   },
@@ -63,7 +63,7 @@ export const FRONTIER_UI = {
     const slots = Array.from({ length: T.team }, (_, i) => {
       const c = g.chainer(st.team[i]);
       return c ? `<button class="slot on" data-act="planTeam" data-id="${c.id}" aria-label="Remove ${esc(c.name)}">${ui.face(c)}<b>${esc(c.name)}</b><small>${ic(A.icon, 14)}${Math.round(g.power(c, T.act, cond))}</small></button>`
-        : `<div class="slot"><span class="plus">+</span><small>Free place</small></div>`;
+        : `<div class="slot"><span class="plus">+</span><small>Empty slot</small></div>`;
     }).join('');
     const pool = g.s.chainers.filter((c) => g.canWork(c) && !st.team.includes(c.id)).sort((a, b) => (g.isFree(b) - g.isFree(a)) || (g.power(b, T.act, cond) - g.power(a, T.act, cond)));
     const bench = pool.map((c) => {
@@ -78,21 +78,21 @@ export const FRONTIER_UI = {
         ${ic(v.icon, 44, '', k === 'foot' ? 'item_compass' : 'item_backpack')}<b>${v.name}</b><small class="pro">${ok ? v.note : `Lodge level ${v.lodge}`}</small>${v.cost ? `<small class="cost">${Object.entries(v.cost).map(([r, n]) => `<span>${ic(resIcon(r), 16)}${n}</span>`).join('')}</small>` : ''}</button>`;
     }).join('');
     const full = g.s.expeditions.length >= g.parallelMax();
-    const why = !open ? `Upgrade the Expedition Lodge to level ${reg.dock}` : full ? 'Every party is out' : !st.team.length ? 'Pick who goes' : !g.canAfford(ev.cost) ? 'Not enough for rations and transport' : '';
-    return `<aside class="sheet-side plan" aria-label="Plan the trip">
+    const why = !open ? `Upgrade the Expedition Lodge to level ${reg.dock}` : full ? 'All squads are out' : !st.team.length ? 'Add a Chainer first' : !g.canAfford(ev.cost) ? 'Not enough for rations and transport' : '';
+    return `<aside class="sheet-side plan" aria-label="Send a squad">
       <button class="x" data-act="planClose" data-quiet="1" aria-label="Close">✕</button>
-      <header>${ic(A.icon, 56)}<div><small>Plan the trip · ${reg.name}</small><h2>${T.name}</h2></div></header>
+      <header>${ic(A.icon, 56)}<div><small>Expedition · ${reg.name}</small><h2>${T.name}</h2></div></header>
       <div class="scroll">
         <div class="row wrap tags"><span class="tag gold">${ic(A.icon, 14)}${A.name}</span><span class="tag">Danger ${pips(poi)}</span><span class="tag navy">${Object.keys(A.w).map((k) => `${ic(STATS[k].icon, 14)}${STATS[k].name}`).join(' + ')}</span>${T.risky ? '<span class="tag red">Dangerous</span>' : ''}<span class="tag">${km(poi.dist)} from your gate</span><span class="tag">closes in ${fmtTime(poi.expires - g.now())}</span></div>
         ${cond ? `<div class="cond">${ic(cond.icon, 34)}<div><b>${cond.name}</b><small>${cond.desc}</small></div></div>` : ''}
-        <h3>What they may bring back</h3>
+        <h3>Possible loot</h3>
         <div class="loot-range">${lootRange(poi.loot, ev.n ? ev.lootMul : APPROACH[st.approach].loot * TRANSPORT[st.transport].carry)}</div>
-        <h3>The party <span>${st.team.length} / ${T.team}</span><button class="btn sm ghost" data-act="planBest">Best team</button></h3>
+        <h3>Squad <span>${st.team.length} / ${T.team}</span><button class="btn sm ghost" data-act="planBest">Best squad</button></h3>
         <div class="slots">${slots}</div>
-        ${bench ? `<div class="benches">${bench}</div>` : '<p class="muted">Nobody else can go right now.</p>'}
-        <h3>How to go about it</h3>
+        ${bench ? `<div class="benches">${bench}</div>` : '<p class="muted">No one else is free.</p>'}
+        <h3>Approach</h3>
         <div class="opts">${approach}</div>
-        <h3>Transport for the trip</h3>
+        <h3>Transport</h3>
         <div class="opts">${transport}</div>
       </div>
       <footer>
@@ -102,7 +102,7 @@ export const FRONTIER_UI = {
             <div class="cost">${costLine(ui, ev.cost)}<span class="muted">rations${TRANSPORT[st.transport].cost ? ' + rent' : ''}</span>${ev.n ? `<span class="muted">· jackpot ${Math.round(ev.crit * 100)}%</span>` : ''}</div>
             ${ev.staPenalty ? '<div class="tag red">Low Stamina: −25% power</div>' : ''}</div>
         </div>
-        <button class="btn green big" data-act="planGo" ${why ? 'disabled' : ''}>${ic('item_compass', 28)}Set off${why ? `<span class="sub">${why}</span>` : `<span class="sub">back in ${fmtTime(ev.time)}</span>`}</button>
+        <button class="btn green big" data-act="planGo" ${why ? 'disabled' : ''}>${ic('item_compass', 28)}Send squad${why ? `<span class="sub">${why}</span>` : `<span class="sub">back in ${fmtTime(ev.time)}</span>`}</button>
       </footer>
     </aside>`;
   },
@@ -116,23 +116,23 @@ export const FRONTIER_UI = {
     const who = e.team.map((id) => { const c = g.chainer(id); return c ? `<div class="who">${ui.face(c, 'sm')}<span><b>${esc(c.name)}</b><small>${c.owned ? 'Lv ' + c.level : 'Wanderer'}</small></span></div>` : ''; }).join('');
     const log = (e.log || []).filter((l) => l.t <= now).reverse().map((l, i) => `<li class="${i === 0 ? 'now' : ''}"><time>${i === 0 && !home ? 'now' : fmtTime(now - l.t) + ' ago'}</time><span>${esc(l.text)}</span></li>`).join('');
     const V = TRANSPORT[e.transport] || TRANSPORT.foot, AP = APPROACH[e.approach] || APPROACH.balanced;
-    return `<aside class="sheet-side party" aria-label="Party">
+    return `<aside class="sheet-side party" aria-label="Squad">
       <button class="x" data-act="partyClose" data-quiet="1" aria-label="Close">✕</button>
       <header>${ic(A.icon, 56)}<div><small>${reg.name} · ${PHASE[ph.phase]}</small><h2>${T.name}</h2></div></header>
       <div class="scroll">
         <div class="whos">${who}</div>
         <div class="journey">${seg(g, e)}<div class="legs"><span>Walk out</span><span>${A.verb}</span><span>Walk back</span></div>
-          <div class="eta">${home ? 'Waiting at the gate with the chest' : `Home in <b>${fmtTime(ph.left)}</b>`}</div></div>
+          <div class="eta">${home ? 'Loot ready at the gate' : `Home in <b>${fmtTime(ph.left)}</b>`}</div></div>
         <div class="row wrap tags"><span class="tag">${ic(AP.icon, 16, '', 'item_scales')}${AP.name}</span><span class="tag">${ic(V.icon, 16, '', 'item_backpack')}${V.name}</span><span class="tag">Chance ${Math.round(e.chance * 100)}%</span></div>
         <h3>Travel log</h3>
         <ol class="log">${log}</ol>
-        <h3>Hoping to bring back</h3>
+        <h3>Possible loot</h3>
         <div class="loot-range">${lootRange(e.poi.loot, e.lootMul)}</div>
       </div>
       <footer>
-        ${home ? `<button class="btn green big" data-act="claimExp" data-id="${e.id}">${ic('chest_wood', 28, '', 'item_chest')}Open the chest</button>`
-          : `<button class="btn navy" data-act="partyShow" data-id="${e.id}">Show on the map</button>
-             ${(ph.phase === 'out' || ph.phase === 'work') && !e.recalled ? `<button class="btn line red" data-act="partyRecall" data-id="${e.id}">Call them back</button>` : ''}`}
+        ${home ? `<button class="btn green big" data-act="claimExp" data-id="${e.id}">${ic('chest_wood', 28, '', 'item_chest')}Claim loot</button>`
+          : `<button class="btn navy" data-act="partyShow" data-id="${e.id}">Show on map</button>
+             ${(ph.phase === 'out' || ph.phase === 'work') && !e.recalled ? `<button class="btn line red" data-act="partyRecall" data-id="${e.id}">Recall</button>` : ''}`}
       </footer>
     </aside>`;
   },
@@ -140,25 +140,25 @@ export const FRONTIER_UI = {
   // ---- the chest: a staged reveal with a lucky draw --------------------------------------------
   loot(ui, r) {
     const g = ui.game, T = POI_TYPES[r.exp.poi.type];
-    const titles = { great: 'Jackpot!', success: 'Great haul!', partial: 'Rough trip', fail: 'It went badly' };
-    const subs = { great: 'Everything went perfectly.', success: `${T.name} is cleared.`, partial: 'They made it back with part of the haul.', fail: 'Almost empty-handed, and everyone needs a long rest.' };
+    const titles = { great: 'Jackpot!', success: 'Great loot!', partial: 'Partial loot', fail: 'Failed' };
+    const subs = { great: 'Perfect run. Extra loot.', success: `${T.name} is cleared.`, partial: 'The squad brought back part of the loot.', fail: 'Almost no loot. The squad needs a long rest.' };
     const chest = `chest_${r.tier}`;
     const entries = Object.entries(r.loot).filter(([k, v]) => v > 0 && !k.startsWith('_'));
     const cards = entries.map(([k, v], i) => {
       const rare = k === 'crystal' || k === 'ingot' || (r.find && r.find[k]);
       return `<div class="lcard ${rare ? 'rare' : ''}" data-v="${v}" style="--i:${i}"><div class="in">${ic(resIcon(k), 64)}<b class="n">0</b><small>${resName(k)}</small>${r.find && r.find[k] ? '<em>Lucky find</em>' : ''}</div></div>`;
-    }).join('') || '<div class="lcard empty" style="--i:0"><div class="in"><b class="n">—</b><small>Nothing this time</small></div></div>';
+    }).join('') || `<div class="lcard empty" style="--i:0"><div class="in"><b class="n">—</b><small>${r.loot._full ? "Storage full" : "No loot this time"}</small></div></div>`;
     const team = r.results.map((x) => { const c = g.chainer(x.id); return c ? `<div class="lwho">${ui.face(c, 'sm')}<span><b>${esc(c.name)}</b><small>+${x.xp} XP${x.rest > 1 ? ' · rests ' + fmtTime(x.rest) : ''}</small></span>${x.leveled ? '<em>Level up!</em>' : ''}</div>` : ''; }).join('');
     // what shaped the haul: the odds they went in with, the approach, the ride, a lucky find
     const e = r.exp, AP = APPROACH[e.approach] || APPROACH.balanced, V = TRANSPORT[e.transport] || TRANSPORT.foot, good = r.outcome === 'great' || r.outcome === 'success';
     const chance = Math.round(e.chance * 100);
     const chips = [
       `<span class="lchip tier ${r.tier}">${{ gold: 'Gold chest', silver: 'Silver chest', wood: 'Wooden chest' }[r.tier]}</span>`,
-      `<span class="lchip">${good && chance < 60 ? 'You beat the odds: ' : 'Chance going in '}<b>${chance}%</b></span>`,
+      `<span class="lchip">${good && chance < 60 ? 'Lucky! Chance was ' : 'Success chance '}<b>${chance}%</b></span>`,
       e.approach !== 'balanced' ? `<span class="lchip">${ic(AP.icon, 18, '', 'item_scales')}${AP.name} approach <b>×${AP.loot}</b></span>` : '',
-      V.carry > 1 ? `<span class="lchip">${ic(V.icon, 18, '', 'item_backpack')}${V.name} <b>+${Math.round((V.carry - 1) * 100)}% haul</b></span>` : '',
+      V.carry > 1 ? `<span class="lchip">${ic(V.icon, 18, '', 'item_backpack')}${V.name} <b>+${Math.round((V.carry - 1) * 100)}% loot</b></span>` : '',
       r.find ? `<span class="lchip gold">${ic('item_clover', 18)}Lucky find!</span>` : '',
-      e.recalled ? '<span class="lchip">Called back early</span>' : '',
+      e.recalled ? '<span class="lchip">Recalled early</span>' : '',
     ].join('');
     const d = document.createElement('div');
     d.className = `loot ${r.outcome}`;
@@ -169,13 +169,13 @@ export const FRONTIER_UI = {
         <div class="banner"><small>${T.name}</small><h1>${titles[r.outcome]}</h1><p>${subs[r.outcome]}</p><div class="lchips">${chips}</div></div>
         <p class="tap">Tap the chest</p>
         <div class="lcards">${cards}</div>
-        ${r.loot._full ? `<p class="full">${ic('ui_storage', 22)}Your storage is full, so part of the haul was left behind. Upgrade the Warehouse or Granary.</p>` : ''}
+        ${r.loot._full ? `<p class="full">${ic('ui_storage', 22)}Storage is full. Some loot was lost. Upgrade the Warehouse or Granary.</p>` : ''}
         <div class="lteam">${team}</div>
         <div class="draw">
           <h2>Lucky draw <small>pick one card</small></h2>
           <div class="dcards">${[0, 1, 2].map((i) => `<button class="dcard" data-act="lootPick" data-i="${i}" aria-label="Lucky card ${i + 1}"><span class="back">${ic('item_card', 96, '', 'item_clover')}</span><span class="front"></span></button>`).join('')}</div>
         </div>
-        <button class="btn green big collect" data-act="lootCollect" disabled>Collect all<span class="sub">into your Storage</span></button>
+        <button class="btn green big collect" data-act="lootCollect" disabled>Claim all<span class="sub">to your Storage</span></button>
       </div>`;
     return d;
   },

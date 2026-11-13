@@ -260,7 +260,7 @@ export class Game {
     const d = BUILDINGS[type];
     if (this.countOf(type) >= this.maxOf(type)) {
       const next = Array.isArray(d.max) ? d.max.findIndex(m => m > this.countOf(type)) : -1;
-      return { ok: false, why: next >= 0 ? `Needs Chainer Home level ${next + 1} for another` : 'Maximum built', home: next >= 0 ? next + 1 : 0 };
+      return { ok: false, why: next >= 0 ? `Needs Chainer Home level ${next + 1} to build more` : 'Maximum built', home: next >= 0 ? next + 1 : 0 };
     }
     const req = this.homeReqFor(type, 1);
     if (this.homeLevel() < req) return { ok: false, why: `Needs Chainer Home level ${req}`, home: req };
@@ -272,7 +272,7 @@ export class Game {
   build(type, x, z, rot = 0) {
     const chk = this.checkBuild(type);
     if (!chk.ok) return chk;
-    if (!this.canPlace(type, x, z, rot)) return { ok: false, why: 'Cannot build there' };
+    if (!this.canPlace(type, x, z, rot)) return { ok: false, why: 'Cannot build here' };
     this.pay(chk.cost);
     const b = { id: uid('b'), type, x, z, rot, level: 0, state: 'building', startAt: this.now(), doneAt: this.now() + chk.cost.time };
     this.s.buildings.push(b);
@@ -282,14 +282,14 @@ export class Game {
   }
   checkUpgrade(b) {
     const d = BUILDINGS[b.type];
-    if (b.state !== 'ready') return { ok: false, why: 'Busy' };
+    if (b.state !== 'ready') return { ok: false, why: 'This building is busy' };
     if (b.level >= d.maxLevel) return { ok: false, why: 'Max level', max: true };
     const next = b.level + 1;
     const c = this.cost(b.type, next);
     const req = this.homeReqFor(b.type, next);
     if (b.type !== 'home' && this.homeLevel() < req) return { ok: false, why: `Needs Chainer Home level ${req}`, cost: c, home: req };
     if (b.type === 'home' && this.s.level < (next - 1) * 2) return { ok: false, why: `Needs Homestead level ${(next - 1) * 2}`, cost: c, level: (next - 1) * 2 };
-    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough ETH — earn it from the Reward Pool' : 'Not enough resources', cost: c, afford: false };
+    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough ETH. Earn it from the Reward Pool' : 'Not enough resources', cost: c, afford: false };
     if (this.activeBuilds() >= this.builderSlots()) return { ok: false, why: 'All builders are busy', cost: c };
     return { ok: true, cost: c };
   }
@@ -343,7 +343,7 @@ export class Game {
   landCost() { const r = LAND.rings[this.s.land]; return r ? { res: r.cost, eth: r.eth } : null; }
   expandLand() {
     const c = this.landCost();
-    if (!c) return { ok: false, why: 'Your land is fully expanded' };
+    if (!c) return { ok: false, why: 'Your land is at max size' };
     if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough ETH' : 'Not enough resources' };
     this.pay(c);
     this.s.land++;
@@ -378,7 +378,7 @@ export class Game {
   }
   startClear(cid, whoId = null) {
     const c = this.s.clearables.find(x => x.id === cid);
-    if (!c) return { ok: false, why: 'Gone' };
+    if (!c) return { ok: false, why: 'Already cleared' };
     if (c.by) return { ok: false, why: 'Already being cleared' };
     if (!this.isUnlocked(c.x, c.z)) return { ok: false, why: 'Expand your land to reach it', locked: true };
     const asked = whoId ? this.chainer(whoId) : null;
@@ -565,7 +565,7 @@ export class Game {
     const c = this.chainer(cid);
     if (!c || c.owned) return { ok: false };
     const cost = Math.round(this.feedCost(c) * (c.fed ? GUEST.extendCostMul : 1));
-    if (this.s.res.bio < cost) return { ok: false, why: 'Not enough Biopoints — grow more on the farm' };
+    if (this.s.res.bio < cost) return { ok: false, why: 'Not enough Biopoints. Harvest crops for more' };
     this.s.res.bio -= cost;
     if (!c.fed) { c.fed = true; c.leavesAt = this.now() + GUEST.fedStay; this.s.quest.c.fed++; this.addXp(10); }
     else c.leavesAt = Math.min(c.leavesAt + GUEST.extendStay, this.now() + GUEST.fedStay * 2);
@@ -577,9 +577,9 @@ export class Game {
   recruit(cid) {
     const c = this.chainer(cid);
     if (!c || c.owned) return { ok: false };
-    if (this.owned().length >= this.ownedSlots()) return { ok: false, why: 'Your Home is full — upgrade it for more beds' };
+    if (this.owned().length >= this.ownedSlots()) return { ok: false, why: 'Chainer Home is full. Upgrade it for more beds' };
     const price = this.recruitPrice(c);
-    if (this.s.eth + 1e-12 < price) return { ok: false, why: 'Not enough ETH — earn it from the Reward Pool' };
+    if (this.s.eth + 1e-12 < price) return { ok: false, why: 'Not enough ETH. Earn it from the Reward Pool' };
     this.s.eth = Math.max(0, this.s.eth - price);
     c.owned = true; c.fed = true; c.leavesAt = 0;
     this.s.quest.c.recruited++;
@@ -628,8 +628,8 @@ export class Game {
     if (!a) return { ok: false, why: 'Build a Training Ground first' };
     if (!c || !c.owned) return { ok: false, why: 'Only your own Chainers can train' };
     if (!this.isFree(c)) return { ok: false, why: 'That Chainer is busy' };
-    if (this.trainedTotal(c) >= BUILDINGS.arena.trainCap[a.level - 1]) return { ok: false, why: 'Upgrade the Training Ground to train further' };
-    if (this.stat(c, stat) >= 15) return { ok: false, why: 'That stat is maxed' };
+    if (this.trainedTotal(c) >= BUILDINGS.arena.trainCap[a.level - 1]) return { ok: false, why: 'Training limit reached. Upgrade the Training Ground' };
+    if (this.stat(c, stat) >= 15) return { ok: false, why: 'This stat is at max' };
     const cost = this.trainCost(c);
     if (!this.canAfford(cost)) return { ok: false, why: 'Not enough resources' };
     this.pay(cost);
@@ -654,7 +654,7 @@ export class Game {
   // ------------------------------------------------------------------------------------------
   plant(bid, crop, at = this.now(), auto = false) {
     const b = this.building(bid), cr = CROPS[crop];
-    if (!b || b.type !== 'farm_plot' || b.state === 'building' || b.crop) return { ok: false, why: 'Busy' };
+    if (!b || b.type !== 'farm_plot' || b.state === 'building' || b.crop) return { ok: false, why: 'This plot is busy' };
     if (this.homeLevel() < cr.home) return { ok: false, why: `Needs Home level ${cr.home}` };
     b.crop = crop; b.plantedAt = at; b.readyAt = at + cr.time; b.lastCrop = crop;
     this.bus.emit('farm:plant', b, auto);
@@ -670,7 +670,7 @@ export class Game {
     const cr = CROPS[b.crop];
     const loot = { bio: this.farmYield(b) };
     if (cr.bonus) for (const k in cr.bonus) loot[k] = randInt(cr.bonus[k][0], cr.bonus[k][1]);
-    if (this.s.res.bio >= this.capOf('bio')) return { ok: false, why: 'Biopoint storage is full — build or upgrade a Granary' };
+    if (this.s.res.bio >= this.capOf('bio')) return { ok: false, why: 'Biopoints storage is full. Build or upgrade a Granary' };
     const got = this.give(loot);
     const crop = b.crop;
     b.crop = null; b.plantedAt = 0; b.readyAt = 0;
@@ -721,7 +721,7 @@ export class Game {
     let took = b.stored;
     for (const k in d.recipe.out) took = Math.min(took, Math.floor(got[k] / d.recipe.out[k]));
     b.stored -= took;
-    if (took <= 0) return { ok: false, why: 'Storage is full — upgrade your Warehouse' };
+    if (took <= 0) return { ok: false, why: 'Storage is full. Upgrade the Warehouse' };
     this.addXp(took);
     this.bus.emit('building:change', b);
     if (auto) this.bus.emit('supply:stored', b, got);
@@ -746,7 +746,7 @@ export class Game {
     if (b.level < cr.workshop) return { ok: false, why: `Needs Workshop level ${cr.workshop}` };
     b.jobs = b.jobs || [];
     const waiting = Object.values(b.done || {}).reduce((a, v) => a + v, 0);
-    if (b.jobs.length + waiting >= BUILDINGS.workshop.queue[b.level - 1]) return { ok: false, why: 'Workshop queue is full — collect finished Crates' };
+    if (b.jobs.length + waiting >= BUILDINGS.workshop.queue[b.level - 1]) return { ok: false, why: 'Workshop queue is full. Collect finished Crates' };
     if (!this.canAfford({ res: cr.cost })) return { ok: false, why: 'Not enough resources' };
     this.pay({ res: cr.cost });
     const start = b.jobs.length ? b.jobs[b.jobs.length - 1].end : this.now();
@@ -860,19 +860,19 @@ export class Game {
   }
   launch(poiId, ids, approach = 'balanced', transport = 'foot') {
     const poi = this.findPoi(poiId);
-    if (!poi) return { ok: false, why: 'That place is gone' };
+    if (!poi) return { ok: false, why: 'This place has closed' };
     const reg = REGIONS.find(r => r.id === poi.region);
     if (!this.lodge()) return { ok: false, why: 'Build the Expedition Lodge first' };
-    if (!this.regionOpen(reg)) return { ok: false, why: `Upgrade the Expedition Lodge to level ${reg.dock} to reach ${reg.name}` };
-    if (this.expOf(poiId)) return { ok: false, why: 'A party is already there' };
-    if (this.s.expeditions.length >= this.parallelMax()) return { ok: false, why: 'Every party is out. Upgrade the Lodge for more' };
-    if (!TRANSPORT[transport] || !this.transportOpen(transport)) return { ok: false, why: 'That transport is not available yet' };
+    if (!this.regionOpen(reg)) return { ok: false, why: `Upgrade the Expedition Lodge to level ${reg.dock} to unlock ${reg.name}` };
+    if (this.expOf(poiId)) return { ok: false, why: 'A squad is already there' };
+    if (this.s.expeditions.length >= this.parallelMax()) return { ok: false, why: 'All squads are out. Upgrade the Lodge for more' };
+    if (!TRANSPORT[transport] || !this.transportOpen(transport)) return { ok: false, why: 'This transport is locked' };
     const T = POI_TYPES[poi.type];
     if (!ids.length) return { ok: false, why: 'Pick at least one Chainer' };
-    if (ids.length > T.team) return { ok: false, why: `The party is limited to ${T.team}` };
-    for (const id of ids) { const c = this.chainer(id); if (!c || !this.isFree(c)) return { ok: false, why: 'Someone in the party is busy' }; }
+    if (ids.length > T.team) return { ok: false, why: `Max squad size here is ${T.team}` };
+    for (const id of ids) { const c = this.chainer(id); if (!c || !this.isFree(c)) return { ok: false, why: 'Someone in the squad is busy' }; }
     const ev = this.evalTeam(poi, ids, approach, transport);
-    if (!this.canAfford(ev.cost)) return { ok: false, why: this.s.res.bio < ev.cost.res.bio ? `Need ${ev.cost.res.bio} Biopoints for rations and transport` : 'Not enough to rent that transport' };
+    if (!this.canAfford(ev.cost)) return { ok: false, why: this.s.res.bio < ev.cost.res.bio ? `Need ${ev.cost.res.bio} Biopoints for rations and transport` : 'Not enough resources to rent this transport' };
     this.pay(ev.cost);
     const now = this.now();
     const exp = {
@@ -914,25 +914,25 @@ export class Game {
   }
   _makeLog(e) {
     const T = POI_TYPES[e.poi.type], r = mulberry32(e.seed ^ 0x5bd1), names = e.team.map(id => this.chainer(id)).filter(Boolean).map(c => c.name);
-    const who = () => pick(names, r) || 'The party';
+    const who = () => pick(names, r) || 'The squad';
     const V = TRANSPORT[e.transport] || TRANSPORT.foot;
     const road = {
-      woods: ['Following the old trail under the maples', `${who()} found a shortcut through the ferns`, 'Crossing a stream on stepping stones', 'Watching a deer slip between the trunks'],
-      ridge: ['Climbing the switchbacks', `${who()} is counting the cairns`, 'Wind is picking up on the ridge', 'Scrambling over loose scree'],
-      ruins: ['Wading through the reeds', 'Passing a row of fallen pillars', `${who()} is reading old carvings`, 'Fog is settling between the stones'],
-      outpost: ['Keeping low behind the rocks', 'A Perfect patrol passes close by', `${who()} spotted a gap in the watch`, 'Moving quietly past the towers'],
-    }[e.region] || ['On the trail'];
+      woods: ['Walking the forest trail', `${who()} found a shortcut`, 'Crossing a stream', 'Spotted a deer in the trees'],
+      ridge: ['Climbing the ridge', `${who()} is checking the map`, 'Strong wind on the ridge', 'Climbing over loose rocks'],
+      ruins: ['Walking through the reeds', 'Passing fallen pillars', `${who()} is reading old carvings`, 'Fog between the stones'],
+      outpost: ['Hiding behind the rocks', 'A Perfect patrol is close', `${who()} found a way past the guards`, 'Moving quietly past the towers'],
+    }[e.region] || ['On the way'];
     const work = {
-      lumber: ['First trunk is down', 'Stacking logs', `${who()} is splitting kindling`],
-      mining: ['Picks are ringing on stone', 'A good seam is showing', `${who()} is hauling rubble`],
-      forage: ['Baskets are filling up', `${who()} found a sweet patch`, 'Sorting the good from the bad'],
-      fight: ['Something stirs…', 'The fight is on!', `${who()} is holding the line`],
-      explore: ['Poking around carefully', `${who()} found a hidden corner`, 'Marking it on the map'],
-      craft: ['Hard at work'],
-    }[T.act] || ['Hard at work'];
+      lumber: ['First tree is down', 'Stacking logs', `${who()} is chopping wood`],
+      mining: ['Mining the rock', 'Found a rich vein', `${who()} is carrying rocks`],
+      forage: ['Baskets are filling up', `${who()} found a good spot`, 'Sorting the harvest'],
+      fight: ['Enemy spotted', 'The fight has started', `${who()} is fighting hard`],
+      explore: ['Searching the area', `${who()} found a hidden spot`, 'Marking it on the map'],
+      craft: ['Working'],
+    }[T.act] || ['Working'];
     const { outcome } = this._outcome(e);
-    const end = { great: 'They found something special!', success: 'Packed up a good haul', partial: 'Had to leave some of it behind', fail: 'It went badly. Heading home' }[outcome];
-    const home = ['Carrying the loot home', 'Singing on the way back', `${who()} is setting the pace`, 'Almost at the gate'];
+    const end = { great: 'Found something special!', success: 'Got good loot', partial: 'Left some loot behind', fail: 'It failed. Heading home' }[outcome];
+    const home = ['Carrying the loot home', 'Singing on the way home', `${who()} is leading the way`, 'Almost home'];
     const out = e.tArrive - e.startAt, wk = e.tLeave - e.tArrive, bk = e.endAt - e.tLeave;
     const two = (list) => { const a = pick(list, r); const rest = list.filter(x => x !== a); return [a, rest.length ? pick(rest, r) : a]; };
     const [road1, road2] = two(road), [work1, work2] = two(work);
@@ -954,19 +954,19 @@ export class Game {
     if (!e) return { ok: false };
     const ph = this.expPhase(e, now);
     if (ph.phase === 'back' || ph.phase === 'home') return { ok: false, why: 'They are already on the way home' };
-    if (e.recalled) return { ok: false, why: 'Already called back' };
+    if (e.recalled) return { ok: false, why: 'Already recalled' };
     e.recalled = true;
     e.log = (e.log || []).filter(l => l.t <= now);
     if (ph.phase === 'out') {
       const walked = now - e.startAt;
       e.turnAt = ph.p; e.cut = 0;
       e.tArrive = now; e.tLeave = now; e.endAt = now + walked;
-      e.log.push({ t: now, text: 'Called back. Turning around' });
+      e.log.push({ t: now, text: 'Recalled. Heading home' });
     } else {
       const back = e.endAt - e.tLeave;
       e.cut = ph.p;
       e.tLeave = now; e.endAt = now + back;
-      e.log.push({ t: now, text: 'Called back. Packing up what they have' });
+      e.log.push({ t: now, text: 'Recalled. Bringing part of the loot' });
     }
     e.log.push({ t: e.endAt, text: 'Back at the gate' });
     this.bus.emit('exp:change', e);
@@ -1063,7 +1063,7 @@ export class Game {
   checkUpgradeBuy(k) {
     const U = UPGRADES[k];
     if (!U) return { ok: false };
-    if (this.hasUpg(k)) return { ok: false, why: 'Already yours', owned: true };
+    if (this.hasUpg(k)) return { ok: false, why: 'Already unlocked', owned: true };
     if (U.needs && !this.first(U.needs)) return { ok: false, why: `Build a ${BUILDINGS[U.needs].name} first`, needs: U.needs };
     if (this.s.level < U.level) return { ok: false, why: `Needs Homestead level ${U.level}`, level: U.level };
     if (!this.canAfford({ res: U.cost })) return { ok: false, why: 'Not enough resources', afford: false };
@@ -1196,15 +1196,15 @@ export class Game {
   advice() {
     const s = this.s, out = [], now = this.now();
     const back = s.expeditions.filter(e => now >= e.endAt);
-    if (back.length) out.push({ icon: 'chest_wood', alt: 'item_chest', text: `${back.length} ${back.length > 1 ? 'parties are' : 'party is'} back from the frontier`, why: 'Open the chest to collect the haul', act: 'claimExp', args: { id: back[0].id }, btn: 'Open' });
+    if (back.length) out.push({ icon: 'chest_wood', alt: 'item_chest', text: `${back.length} ${back.length > 1 ? 'squads are' : 'squad is'} back from the Frontier`, why: 'Loot ready!', act: 'claimExp', args: { id: back[0].id }, btn: 'Claim' });
     const hungry = this.guests().filter(c => !c.fed);
-    if (hungry.length) out.push({ icon: 'item_food_bowl', text: `${hungry[0].name} the Wanderer is hungry`, why: 'Fed Wanderers work for you and can be recruited', act: 'selectChainer', args: { id: hungry[0].id }, btn: 'Feed' });
+    if (hungry.length) out.push({ icon: 'item_food_bowl', text: `${hungry[0].name} the Wanderer is hungry`, why: 'A fed Wanderer works for you and can be recruited', act: 'selectChainer', args: { id: hungry[0].id }, btn: 'Feed' });
     if (s.hungry) out.push({ icon: 'res_bio', text: 'Your Chainers are out of Biopoints', why: 'Hungry Chainers work at 70%. Plant and harvest crops', act: 'hint', args: { hint: 'farm' }, btn: 'Farm' });
     const q = this.quest();
-    if (q) { const pr = this.questProgress(q); out.push({ icon: 'ui_goals', text: q.text, why: pr.done ? 'Goal complete: claim the reward' : `Current goal · ${pr.cur} / ${pr.max}`, act: 'quest', btn: pr.done ? 'Claim' : 'Show me' }); }
+    if (q) { const pr = this.questProgress(q); out.push({ icon: 'ui_goals', text: q.text, why: pr.done ? 'Quest complete! Claim your reward' : `Current quest · ${pr.cur} / ${pr.max}`, act: 'quest', btn: pr.done ? 'Claim' : 'Go' }); }
     const idle = this.owned().filter(c => c.status === 'idle');
-    if (idle.length && this.lodge() && s.expeditions.length < this.parallelMax()) out.push({ icon: 'item_compass', text: `${idle[0].name} has nothing to do`, why: 'Send a party to the frontier for resources', act: 'expeditions', btn: 'Frontier' });
-    else if (idle.length && s.clearables.some(c => !c.by && this.isUnlocked(c.x, c.z))) out.push({ icon: 'item_axe', text: `${idle[0].name} has nothing to do`, why: 'Tap a tree, rock or bush on your land to clear it', act: 'selectChainer', args: { id: idle[0].id }, btn: 'Show' });
+    if (idle.length && this.lodge() && s.expeditions.length < this.parallelMax()) out.push({ icon: 'item_compass', text: `${idle[0].name} is free`, why: 'Send a squad to the Frontier for loot', act: 'expeditions', btn: 'Frontier' });
+    else if (idle.length && s.clearables.some(c => !c.by && this.isUnlocked(c.x, c.z))) out.push({ icon: 'item_axe', text: `${idle[0].name} is free`, why: 'Tap a tree, rock or bush on your land to clear it', act: 'selectChainer', args: { id: idle[0].id }, btn: 'Go' });
     // upgrades that are ready, then the ones that are close
     const ups = [];
     for (const b of s.buildings) {
@@ -1215,7 +1215,7 @@ export class Game {
     }
     ups.sort((a, b) => a.rank - b.rank);
     for (const u of ups.slice(0, 2)) {
-      out.push({ icon: u.d.icon, text: `Upgrade ${u.d.name} to level ${u.b.level + 1}`, why: u.chk.ok ? this.upgradeGain(u.b) : u.chk.why, act: 'focusBuilding', args: { id: u.b.id }, btn: u.chk.ok ? 'Upgrade' : 'See', locked: !u.chk.ok });
+      out.push({ icon: u.d.icon, text: `Upgrade ${u.d.name} to level ${u.b.level + 1}`, why: u.chk.ok ? this.upgradeGain(u.b) : u.chk.why, act: 'focusBuilding', args: { id: u.b.id }, btn: u.chk.ok ? 'Upgrade' : 'Go', locked: !u.chk.ok });
     }
     for (const t of ['farm_plot', 'balloon_dock', 'workshop', 'pool_shrine', 'sawmill', 'stonecutter', 'granary', 'warehouse', 'exchange', 'rest_lodge']) {
       if (this.countOf(t)) continue;
@@ -1226,7 +1226,7 @@ export class Game {
     for (const k of UPGRADE_ORDER) {
       if (this.hasUpg(k)) continue;
       const chk = this.checkUpgradeBuy(k);
-      out.push({ icon: UPGRADES[k].icon, alt: UPGRADES[k].alt, text: `Get the ${UPGRADES[k].name}`, why: chk.ok ? UPGRADES[k].desc : chk.why, act: 'open', args: { panel: 'supply' }, btn: 'Supply', locked: !chk.ok });
+      out.push({ icon: UPGRADES[k].icon, alt: UPGRADES[k].alt, text: `Unlock the ${UPGRADES[k].name}`, why: chk.ok ? UPGRADES[k].desc : chk.why, act: 'open', args: { panel: 'supply' }, btn: 'Go', locked: !chk.ok });
       break;
     }
     return out.slice(0, 7);
@@ -1236,11 +1236,11 @@ export class Game {
     const d = BUILDINGS[b.type], n = b.level + 1, i = n - 1;
     switch (b.type) {
       case 'home': return `${d.slots[i]} beds, ${d.builders[i]} builders, new buildings`;
-      case 'camp': return `${d.guests[i]} Wanderers at once, a bigger larder`;
+      case 'camp': return `${d.guests[i]} Wanderers at once, more Kitchen food`;
       case 'farm_plot': return `+${Math.round((d.yieldMul[i] / d.yieldMul[i - 1] - 1) * 100)}% harvest`;
-      case 'warehouse': return 'More room for everything';
-      case 'granary': return 'More room for Biopoints';
-      case 'balloon_dock': return `${d.parallel[i]} parties at once${d.regions[i] > d.regions[i - 1] ? ', a new zone' : ''}${n === 2 ? ', the Wagon' : ''}`;
+      case 'warehouse': return 'More storage for everything';
+      case 'granary': return 'More storage for Biopoints';
+      case 'balloon_dock': return `${d.parallel[i]} squads at once${d.regions[i] > d.regions[i - 1] ? ', a new zone' : ''}${n === 2 ? ', the Wagon' : ''}`;
       case 'workshop': return `Faster, and ${Object.values(CRATES).find(c => c.workshop === n)?.name || 'a longer queue'}`;
       case 'pool_shrine': return `+${Math.round(d.bonus[i] * 100)}% pool points for every Crate`;
       case 'exchange': return `Lower fee: ${Math.round(d.fee[i] * 100)}%`;
@@ -1290,7 +1290,7 @@ export class Game {
     const p = this.first('pool_shrine');
     if (!p) return { ok: false, why: 'Build the Pool Shrine first' };
     n = Math.min(n, this.s.crates[key] || 0);
-    if (n <= 0) return { ok: false, why: 'No Crates of that kind — assemble some in the Workshop' };
+    if (n <= 0) return { ok: false, why: 'No Crates of that kind. Craft some in the Workshop' };
     this._settlePool(this.now());
     const pts = Math.round(CRATES[key].points * n * (1 + this.poolBonus()));
     this.s.crates[key] -= n;
@@ -1338,7 +1338,7 @@ export class Game {
     return { out, rate: amount > 0 ? out / amount : spot * (1 - fee), spot, impact: amount > 0 ? Math.max(0, 1 - (raw / amount) / (spot * (1 - fee))) : 0, fee };
   }
   swap(from, to, amount) {
-    if (!this.first('exchange')) return { ok: false, why: 'Build the Exchange first' };
+    if (!this.first('exchange')) return { ok: false, why: 'Build the Trading Post first' };
     amount = Math.floor(amount);
     if (from === to || amount <= 0) return { ok: false, why: 'Pick an amount' };
     if ((this.s.res[from] || 0) < amount) return { ok: false, why: `Not enough ${RES[from].name}` };

@@ -151,7 +151,11 @@ export class Engine {
       if (!k.render) return;
       for (const mi of k.render.meshInstances) { const m = mi.material.clone(); m._canon = true; mi.material = m; mis.push({ m, base: m.emissiveIntensity || 1 }); }
     });
-    if (mis.length) list.push({ mis, ph: Math.random() * 6, acc: 0 });
+    // what kind of light it is decides how it moves: 2 a flame (jumps, and the flame itself licks), 1 a lamp or a lit
+    // window (steady, an odd flick), 0 crystals and other magic (a slow breath)
+    const nm = node.name || '';
+    const kind = /fire|flame|burner|mouth|torch/.test(nm) ? 2 : /lantern|lamp|window/.test(nm) ? 1 : 0;
+    if (mis.length) list.push({ mis, ph: Math.random() * 6, acc: 0, kind, k: -1, n: kind === 2 && !/mouth/.test(nm) ? node : null, sc: node.getLocalScale().clone() });
   }
   animate(set, dt, t, speed = 1) {
     for (const s of set.spin) { const a = [0, 0, 0]; a[s.ax] = 130 * dt * speed; s.n.rotateLocal(a[0], a[1], a[2]); }
@@ -159,9 +163,19 @@ export class Engine {
     for (const s of set.sway) s.n.setLocalEulerAngles(s.r.x + Math.sin(t * 1.3 + s.ph) * 2.2, s.r.y, s.r.z + Math.cos(t * 1.1 + s.ph) * 2.6);
     for (const g of set.glow) {
       g.acc += dt;
-      if (g.acc < 0.05) continue;            // 20 times a second is plenty for a flame
+      if (g.acc < (g.kind === 2 ? 0.07 : 0.11)) continue;            // a flame changes about 14 times a second, in steps
       g.acc = 0;
-      const k = 0.78 + 0.3 * Math.sin(t * 3.1 + g.ph) + 0.14 * Math.sin(t * 9.7 + g.ph * 2) + 0.08 * Math.sin(t * 23 + g.ph);
+      let k;
+      if (g.kind === 2) {
+        const h = hash1(Math.floor(t * 14) + g.ph * 31), gut = hash1(Math.floor(t * 2.6 + g.ph) + 7.7) > 0.88 ? 0.72 : 1;      // now and then it gutters
+        k = (0.74 + 0.36 * h + 0.12 * Math.sin(t * 3.1 + g.ph)) * gut;
+        if (g.n) { const up = 0.86 + 0.3 * h * gut, w = 1.05 - 0.1 * h; g.n.setLocalScale(g.sc.x * w, g.sc.y * up, g.sc.z * w); }
+      } else if (g.kind === 1) {
+        k = 0.95 + 0.05 * Math.sin(t * 1.7 + g.ph);
+        if (hash1(Math.floor(t * 9) + g.ph * 17) > 0.975) k *= 0.74;
+      } else k = 0.86 + 0.18 * Math.sin(t * 1.3 + g.ph);
+      if (Math.abs(k - g.k) < 0.012) continue;                        // nothing to see: leave the material alone
+      g.k = k;
       // (material numbers live in the material's uniform block in this engine version, so set the property)
       for (const x of g.mis) { x.m.emissiveIntensity = x.base * k; x.m.update(); }
     }
@@ -367,6 +381,7 @@ export class Engine {
   zoomBy(f) { const r = this.rig; r.dist = clamp(r.dist * f, r.minDist, r.maxDist); }
 }
 
+const hash1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
 /** Depth-first visit of an entity hierarchy. */
 export function walk(e, fn) {
   fn(e);
