@@ -152,6 +152,9 @@ export class UI {
   // ------------------------------------------------------------------------------------------
   // HUD
   // ------------------------------------------------------------------------------------------
+  /** What the counters show: what you have, minus loot still sitting in a chest you have not collected yet. */
+  _shown(k) { return Math.max(0, Math.floor(this.game.s.res[k] || 0) - ((this._hold && this._hold[k]) || 0)); }
+  _holdAdd(got) { this._hold = this._hold || {}; for (const k in got) if (!k.startsWith('_') && got[k] > 0) this._hold[k] = (this._hold[k] || 0) + got[k]; this._hudDirty = true; }
   renderHud(first = false) {
     const g = this.game, s = g.s, home = this.mode === 'home';
     const cosy = g.cosy(), tier = g.cosyTier(cosy), next = g.cosyNext(cosy);
@@ -159,7 +162,7 @@ export class UI {
     // --- what you carry: one paper pill + the ETH pill -------------------------------------
     let chips = '';
     for (const k of HUD_RES) {
-      const v = Math.floor(s.res[k] || 0), cap = g.capOf(k);
+      const v = this._shown(k), cap = g.capOf(k);
       const main = k === 'wood' || k === 'stone' || k === 'bio';
       if (!main && !v && !this.prevRes['seen_' + k]) continue;
       this.prevRes['seen_' + k] = true;
@@ -199,7 +202,7 @@ export class UI {
     this._set('hud-top', `<nav class="snav" aria-label="Main">${left}</nav>${res}<nav class="snav world" aria-label="World">${right}${pop}</nav>`);
     // animate resource changes
     for (const k of [...HUD_RES, 'eth']) {
-      const v = k === 'eth' ? s.eth : Math.floor(s.res[k] || 0);
+      const v = k === 'eth' ? s.eth : this._shown(k);
       const p = this.prevRes[k];
       if (p !== undefined && Math.abs(v - p) > (k === 'eth' ? 1e-9 : 0.5) && !first) {
         const el = document.getElementById('chip-' + k);
@@ -217,7 +220,7 @@ export class UI {
         <div class="rw"><small>Reward</small>${Object.entries(q.reward).map(([k, v]) => `<span>${ic(resIcon(k), 22)}${fmt(v)}</span>`).join('')}<em>${pr.done ? 'Claim' : 'Go'}</em></div>
       </button>`;
     }
-    const fullK = ['wood', 'stone', 'bio'].filter((k) => Math.floor(s.res[k] || 0) >= g.capOf(k));
+    const fullK = ['wood', 'stone', 'bio'].filter((k) => this._shown(k) >= g.capOf(k));
     if (fullK.length && home) side += `<button class="mini alert" data-act="open" data-panel="storage">${ic('ui_storage', 26)}<span><b>${fullK.map((k) => RES[k].name).join(', ')} full.</b> Anything more is lost. Get more storage</span></button>`;
     if (s.hungry && home) side += `<button class="mini alert" data-act="hint" data-hint="farm">${ic('res_bio', 26)}<span><b>Chainers are hungry.</b> Harvest crops for Biopoints</span></button>`;
     this._set('hud-left', side);
@@ -631,6 +634,7 @@ export class UI {
     const el = FRONTIER_UI.loot(this, r);
     this.root.appendChild(el);
     this._loot = { el, r, stage: 0, bonus: {} };
+    this._hold = null; this._holdAdd(r.loot);          // the counters go up when the loot is collected, not before
     this.sfx.play('chest_shake');
     this._lootT = setTimeout(() => this.lootOpen(), 2200);
   }
@@ -673,6 +677,7 @@ export class UI {
     if (!res.ok) { L.stage = 3; L.el.querySelector('.collect').disabled = false; return; }
     L.stage = 3;
     L.bonus = res.got || {};
+    this._holdAdd(L.bonus);
     const btns = [...L.el.querySelectorAll('.dcard')];
     btns.forEach((b, j) => { b.querySelector('.front').innerHTML = FRONTIER_UI.luckyFront(res.options[j]); b.disabled = true; });
     btns[i].classList.add('flip', 'mine');
@@ -697,7 +702,7 @@ export class UI {
     this._loot = null;
     this.flyLoot({ x: chest.left + chest.width / 2, y: chest.top + chest.height / 2 }, all, true);
     this.sfx.play('collect');
-    this._hudDirty = true;
+    setTimeout(() => { if (!this._loot) { this._hold = null; this._hudDirty = true; } }, 800);      // as the pieces land on the counters
   }
 
   // ---- a short guided tour: what is where -------------------------------------------------------------
