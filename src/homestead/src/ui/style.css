@@ -796,3 +796,10 @@ button.tag { pointer-events: auto; cursor: pointer; border: 0; font-family: inhe
 .mk.timer .pill small { font-size: 10.5px; font-weight: 900; color: var(--ink-2); margin-right: -2px; } .mk.pool .pill small { font-size: 11px; font-weight: 700; color: var(--eth-l); margin-right: -3px; }
 .c-lost { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 12px; padding: 7px 10px; border-radius: 12px; background: #f8d9cf; color: var(--alert); font-size: 13px; font-weight: 900; } .c-lost .ic { width: 22px; height: 22px; }
 .trip-note { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+
+/* a shortfall is always red, whatever the resource (ETH used to stay navy), and sits on a pale red chip so it cannot be missed */
+.cost span.no, .cost span.eth.no { color: var(--alert); background: #f8d9cf; border-radius: 9px; padding: 1px 8px 1px 3px; box-shadow: inset 0 0 0 2px #e9a493; }
+.pp-go .cost span.no, .btn.upcta .cost span.no { background: #fff; color: var(--alert); }
+.opt .cost span.no { color: var(--alert); } .opt.on .cost span.no { color: #ffc9b8; }
+.abtn em.no { color: #ffd0c4; text-decoration: none; } .abtn.off em.no, .abtn:not(.eth):not(.feed) em.no { color: var(--alert); }
+.btn.short .sub { background: #fff; color: var(--alert); border-radius: 8px; padding: 1px 7px; opacity: 1; }

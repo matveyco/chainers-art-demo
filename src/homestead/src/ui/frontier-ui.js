@@ -75,7 +75,7 @@ export const FRONTIER_UI = {
     const transport = Object.entries(TRANSPORT).map(([k, v]) => {
       const ok = g.transportOpen(k);
       return `<button class="opt ${st.transport === k ? 'on' : ''} ${ok ? '' : 'locked'}" data-act="planSet" data-key="transport" data-val="${k}" aria-pressed="${st.transport === k}">
-        ${ic(v.icon, 44, '', k === 'foot' ? 'item_compass' : 'item_backpack')}<b>${v.name}</b><small class="pro">${ok ? v.note : `Lodge level ${v.lodge}`}</small>${v.cost ? `<small class="cost">${Object.entries(v.cost).map(([r, n]) => `<span>${ic(resIcon(r), 16)}${n}</span>`).join('')}</small>` : ''}</button>`;
+        ${ic(v.icon, 44, '', k === 'foot' ? 'item_compass' : 'item_backpack')}<b>${v.name}</b><small class="pro">${ok ? v.note : `Lodge level ${v.lodge}`}</small>${v.cost ? `<small class="cost">${Object.entries(v.cost).map(([r, n]) => `<span class="${(g.s.res[r] || 0) < n ? 'no' : ''}">${ic(resIcon(r), 16)}${n}</span>`).join('')}</small>` : ''}</button>`;
     }).join('');
     const full = g.s.expeditions.length >= g.parallelMax();
     const why = !open ? `Upgrade the Expedition Lodge to level ${reg.dock}` : full ? 'All squads are out' : !st.team.length ? 'Add a Chainer first' : !g.canAfford(ev.cost) ? 'Not enough for rations and transport' : '';

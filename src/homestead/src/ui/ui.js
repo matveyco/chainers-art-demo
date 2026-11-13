@@ -168,7 +168,7 @@ export class UI {
     const crates = s.crates.crate1 + s.crates.crate2 + s.crates.crate3;
     if (crates) chips += `<div class="chip" id="chip-crate" title="Crates ready for the Reward Pool">${ic('item_crate_1', 30)}<span>${crates}</span></div>`;
     const res = `<div class="res-wrap"><div class="respill" data-act="open" data-panel="storage" role="button" aria-label="Storage">${chips}</div>
-      <div class="chip eth" id="chip-eth" data-act="open" data-panel="pool" role="button" title="ETH. Earned only from the Reward Pool">${ic('item_eth', 30)}<span>${fmtEth(s.eth, 5)}</span><small>ETH</small></div></div>`;
+      <div class="chip eth" id="chip-eth" data-act="open" data-panel="pool" role="button" title="ETH. Earned only from the Reward Pool">${ic('item_eth', 30)}<span>${fmtEth(s.eth, 5)}</span><small>mETH</small></div></div>`;
     // --- sticker navigation --------------------------------------------------------------------
     const hungryGuests = g.guests().filter(c => !c.fed).length;
     const now = g.now();
@@ -354,7 +354,7 @@ export class UI {
       const num = document.createElement('div');
       num.className = 'pop-num';
       num.style.left = (from.x + (i - (Object.keys(got).length - 1) / 2) * 54) + 'px'; num.style.top = (from.y - 10 - i * 4) + 'px';
-      num.innerHTML = `${ic(resIcon(k), 22)}+${k === 'eth' ? fmtEth(amount, 6) : fmt(amount)}`;
+      num.innerHTML = `${ic(resIcon(k), 22)}+${k === 'eth' ? fmtEth(amount) + ' mETH' : fmt(amount)}`;
       this.el.fly.appendChild(num);
       setTimeout(() => num.remove(), 1150);
       for (let j = 0; j < n; j++) {
@@ -400,7 +400,7 @@ export class UI {
     this._celebrating = true;
     const d = document.createElement('div');
     d.className = 'celebrate';
-    const loot = c.loot ? `<div class="gifts">${Object.entries(c.loot).filter(([k, v]) => v && !k.startsWith('_')).map(([k, v], i) => `<div class="it" style="animation-delay:${0.25 + i * 0.09}s">${ic(resIcon(k), 40)}${k === 'eth' ? fmtEth(v, 6) : '+' + fmt(v)}</div>`).join('')}</div>` : '';
+    const loot = c.loot ? `<div class="gifts">${Object.entries(c.loot).filter(([k, v]) => v && !k.startsWith('_')).map(([k, v], i) => `<div class="it" style="animation-delay:${0.25 + i * 0.09}s">${ic(resIcon(k), 40)}${k === 'eth' ? '+' + fmtEth(v) + ' mETH' : '+' + fmt(v)}</div>`).join('')}</div>` : '';
     const lostMap = c.loot && c.loot._lost;
     if (lostMap) c.html = (c.html || '') + `<p class="c-lost">${ic('ui_storage', 22)}<span>Storage full: ${Object.entries(lostMap).map(([k, n]) => `${fmt(n)} ${resName(k)}`).join(', ')} lost.</span><button class="btn sm" data-act="celebrateStore">Get more storage</button></p>`;
     d.innerHTML = `<div class="card"><div class="rays"></div>${c.hero ? `<div class="hero">${c.heroImg ? `<img src="${c.heroImg}">` : ic(c.hero, 120, '', c.heroAlt || '')}</div>` : ''}
@@ -778,7 +778,7 @@ export class UI {
     const g = this.game;
     let h = '<span class="cost">';
     for (const k in (cost.res || {})) { const need = cost.res[k]; h += `<span class="${(g.s.res[k] || 0) < need ? 'no' : ''}" title="${resName(k)}">${ic(resIcon(k), 20)}${fmt(need)}</span>`; }
-    if (cost.eth) h += `<span class="eth ${g.s.eth + 1e-12 < cost.eth ? 'no' : ''}" title="ETH">${ic('item_eth', 20)}${fmtEth(cost.eth, 5)}</span>`;
+    if (cost.eth) h += `<span class="eth ${g.s.eth + 1e-12 < cost.eth ? 'no' : ''}" title="mETH (thousandths of an ETH)">${ic('item_eth', 20)}${fmtEth(cost.eth)} mETH</span>`;
     if (cost.time && !opts.noTime) h += `<span title="Time">${ic('item_hourglass', 20)}${fmtTime(cost.time)}</span>`;
     return h + '</span>';
   }

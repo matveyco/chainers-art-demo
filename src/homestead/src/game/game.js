@@ -308,7 +308,7 @@ export class Game {
     const req = this.homeReqFor(b.type, next);
     if (b.type !== 'home' && this.homeLevel() < req) return { ok: false, why: `Needs Chainer Home level ${req}`, cost: c, home: req };
     if (b.type === 'home' && this.s.level < (next - 1) * 2) return { ok: false, why: `Needs Homestead level ${(next - 1) * 2}`, cost: c, level: (next - 1) * 2 };
-    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough ETH. Earn it from the Reward Pool' : 'Not enough resources', cost: c, afford: false };
+    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough mETH. Earn it in the Reward Pool' : 'Not enough resources', cost: c, afford: false };
     if (this.activeBuilds() >= this.builderSlots()) return { ok: false, why: 'All builders are busy', cost: c };
     return { ok: true, cost: c };
   }
@@ -376,7 +376,7 @@ export class Game {
   expandLand() {
     const c = this.landCost();
     if (!c) return { ok: false, why: 'Your land is at max size' };
-    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough ETH' : 'Not enough resources' };
+    if (!this.canAfford(c)) return { ok: false, why: c.eth > this.s.eth ? 'Not enough mETH. Earn it in the Reward Pool' : 'Not enough resources' };
     this.pay(c);
     this.s.land++;
     this.s.quest.c.land++;
@@ -619,7 +619,7 @@ export class Game {
     if (!c || c.owned) return { ok: false };
     if (this.owned().length >= this.ownedSlots()) return { ok: false, why: 'Chainer Home is full. Upgrade it for more beds' };
     const price = this.recruitPrice(c);
-    if (this.s.eth + 1e-12 < price) return { ok: false, why: 'Not enough ETH. Earn it from the Reward Pool' };
+    if (this.s.eth + 1e-12 < price) return { ok: false, why: 'Not enough mETH. Earn it in the Reward Pool' };
     this.s.eth = Math.max(0, this.s.eth - price);
     c.owned = true; c.fed = true; c.leavesAt = 0;
     this.s.quest.c.recruited++;

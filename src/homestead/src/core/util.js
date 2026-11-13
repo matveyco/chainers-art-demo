@@ -36,10 +36,12 @@ export function fmt(n) {
   if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k';
   return String(n);
 }
-export function fmtEth(v, digits = 4) {
+/** ETH amounts are shown in mETH (thousandths): "1.5", not "0.0015". Callers add the unit. */
+export function fmtEth(v) {
   if (!v) return '0';
-  if (v < 0.0001) return v.toFixed(6).replace(/0+$/, '');
-  return v.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '');
+  const m = v * 1000, a = Math.abs(m);
+  const d = a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : a >= 0.01 ? 3 : 4;
+  return m.toFixed(d).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }
 export function fmtTime(sec) {
   sec = Math.max(0, Math.ceil(sec));

@@ -42,7 +42,7 @@ function chainerCard(ui, c, opts = {}) {
       ${ui.statChips(c, opts.hi)}
       <div class="row wrap" style="margin-top:5px;gap:5px">
         <span class="tag ${cls}">${st}</span>
-        ${c.owned ? '' : `<span class="tag eth">${ic('item_eth', 14)}${fmtEth(g.recruitPrice(c), 4)}</span>`}
+        ${c.owned ? '' : `<span class="tag eth">${ic('item_eth', 14)}${fmtEth(g.recruitPrice(c))} mETH</span>`}
         ${opts.extra || ''}
       </div>
     </div>
@@ -66,7 +66,7 @@ export const PANELS = {
         if (chk.ok) return { k: 'go', html: '<em class="go">Build</em>', cost };
         if (chk.why === 'Maximum built') return { k: 'done', html: `<em class="done">Built ${g.countOf(t)} / ${g.maxOf(t)}</em>`, cost: null };
         if (chk.home) return { k: 'lock', html: `<em class="lock">${ic('item_lock', 16)}Chainer Home ${chk.home}</em>`, cost };
-        if (chk.afford === false) { const k = g.missing(chk.cost)[0]; return { k: 'need', html: `<em class="need">${k && k !== 'eth' ? `Need ${fmt(Math.ceil(chk.cost.res[k] - (g.s.res[k] || 0)))} more ${resName(k)}` : 'Needs ETH from the Reward Pool'}</em>`, cost }; }
+        if (chk.afford === false) { const k = g.missing(chk.cost)[0]; return { k: 'need', html: `<em class="need">${k && k !== 'eth' ? `Need ${fmt(Math.ceil(chk.cost.res[k] - (g.s.res[k] || 0)))} more ${resName(k)}` : 'Not enough mETH. Earn it in the Reward Pool'}</em>`, cost }; }
         return { k: 'need', html: `<em class="need">${chk.why}</em>`, cost };
       };
       const row = (t) => {
@@ -344,8 +344,8 @@ export const PANELS = {
       let acts = '';
       if (!c.owned) {
         const price = g.recruitPrice(c), fc = Math.round(g.feedCost(c) * (c.fed ? GUEST.extendCostMul : 1));
-        acts = `<button class="btn green" data-act="feed" data-id="${c.id}">${ic('res_bio', 22)}${c.fed ? 'Feed again' : 'Feed'} <span class="sub">${fc}</span></button>
-          <button class="btn eth" data-act="recruit" data-id="${c.id}">${ic('item_eth', 22)}Recruit <span class="sub">${fmtEth(price, 4)} ETH</span></button>
+        acts = `<button class="btn green ${g.s.res.bio >= fc ? '' : 'short'}" data-act="feed" data-id="${c.id}">${ic('res_bio', 22)}${c.fed ? 'Feed again' : 'Feed'} <span class="sub">${fc}</span></button>
+          <button class="btn eth ${g.s.eth + 1e-12 >= price ? '' : 'short'}" data-act="recruit" data-id="${c.id}">${ic('item_eth', 22)}Recruit <span class="sub">${fmtEth(price)} mETH</span></button>
           <button class="btn red sm" data-act="kick" data-id="${c.id}">Dismiss</button>`;
       } else {
         acts = `${c.status === 'job' ? `<button class="btn ghost" data-act="unassign" data-id="${c.id}">Stop work</button>` : `<button class="btn" data-act="open" data-panel="jobs" data-id="${c.id}" ${g.isFree(c) ? '' : 'disabled'}>${ic('item_hammer', 22)}Assign job</button>`}
@@ -466,22 +466,22 @@ export const PANELS = {
             ${n > 1 ? `<button class="btn sm eth" data-act="deposit" data-key="${k}" data-n="${n}">All ${n}</button>` : ''}</div>`;
         }).join('');
         body = `<div class="row" style="gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-            <div class="ring" style="--p:${pct}"><div><div class="muted">pays out in</div><div class="big-num">${fmtClock(P.left)}</div><div class="eth-num">${fmtEth(P.reward, 5)} ETH</div></div></div>
+            <div class="ring" style="--p:${pct}"><div><div class="muted">pays out in</div><div class="big-num">${fmtClock(P.left)}</div><div class="eth-num">${fmtEth(P.reward, 5)} mETH</div></div></div>
             <div class="grow" style="min-width:220px">
               <div class="kv"><span>Your points</span><b>${fmt(P.mine)}</b><span>All players</span><b>${fmt(P.total)}</b><span>Your share now</span><b>${(P.share * 100).toFixed(2)}%</b>
-              <span>Estimated payout</span><b class="eth-num">${fmtEth(P.projected, 6)} ETH</b><span>Your rank</span><b>${P.mine ? '#' + P.rank : '—'} of ${P.board.length}</b></div>
+              <span>Estimated payout</span><b class="eth-num">${fmtEth(P.projected, 6)} mETH</b><span>Your rank</span><b>${P.mine ? '#' + P.rank : '—'} of ${P.board.length}</b></div>
               <div class="bar eth" style="margin-top:8px;height:12px"><i style="width:${clamp(P.share * 100, 0, 100)}%"></i></div>
-              <div class="muted" style="margin-top:6px">1 ETH is shared every day, in ${Math.round(86400 / POOL.epochSec)} rounds of 30 minutes. You get ETH by your share of the points uploaded in that round${g.poolBonus() ? ` (your Pool Shrine adds +${Math.round(g.poolBonus() * 100)}% points)` : ''}.</div>
+              <div class="muted" style="margin-top:6px">1 ETH (1,000 mETH) is shared every day, in ${Math.round(86400 / POOL.epochSec)} rounds of 30 minutes. You get ETH by your share of the points uploaded in that round${g.poolBonus() ? ` (your Pool Shrine adds +${Math.round(g.poolBonus() * 100)}% points)` : ''}.</div>
             </div></div>
           <h3>Upload Crates</h3>${dep}
           ${s.crates.crate1 + s.crates.crate2 + s.crates.crate3 === 0 ? `<button class="btn" data-act="open" data-panel="workshop">${ic('workshop', 22)}Craft Crates</button>` : ''}`;
       } else if (st.tab === 'board') {
         body = P.board.slice(0, 30).map((b, i) => `<div class="line ${b.me ? 'me' : ''}"><div class="rk">${i + 1}</div><div class="grow"><b style="color:var(--navy)">${esc(b.name)}</b>${b.me ? ' <span class="tag gold">You</span>' : ''}</div><b>${fmt(b.points)}</b><span class="muted" style="width:60px;text-align:right">${P.total ? (b.points / P.total * 100).toFixed(1) : 0}%</span></div>`).join('');
       } else {
-        body = (s.pool.history.length ? s.pool.history.map(h => `<div class="line">${ic('item_eth', 30)}<div class="grow"><b class="eth-num">+${fmtEth(h.eth, 6)} ETH</b><div class="muted">${fmt(h.points)} of ${fmt(h.total)} points · ${(h.points / h.total * 100).toFixed(1)}%</div></div><span class="muted">${fmtTime(g.now() - h.at)} ago</span></div>`).join('') : '<div class="sheet"><p>No payouts yet. Upload a Crate and wait for the round to end.</p></div>')
-          + `<p class="muted" style="margin-top:8px">Total earned: <b class="eth-num">${fmtEth(s.pool.earned, 6)} ETH</b> · all-time points: <b>${fmt(s.pool.lifetime)}</b></p>`;
+        body = (s.pool.history.length ? s.pool.history.map(h => `<div class="line">${ic('item_eth', 30)}<div class="grow"><b class="eth-num">+${fmtEth(h.eth, 6)} mETH</b><div class="muted">${fmt(h.points)} of ${fmt(h.total)} points · ${(h.points / h.total * 100).toFixed(1)}%</div></div><span class="muted">${fmtTime(g.now() - h.at)} ago</span></div>`).join('') : '<div class="sheet"><p>No payouts yet. Upload a Crate and wait for the round to end.</p></div>')
+          + `<p class="muted" style="margin-top:8px">Total earned: <b class="eth-num">${fmtEth(s.pool.earned, 6)} mETH</b> · all-time points: <b>${fmt(s.pool.lifetime)}</b></p>`;
       }
-      return `${head('item_eth', 'World Reward Pool', `${ic('item_globe', 16, '', 'item_star')} Shared by all players · your balance ${fmtEth(s.eth, 6)} ETH`)}
+      return `${head('item_eth', 'World Reward Pool', `${ic('item_globe', 16, '', 'item_star')} Shared by all players · your balance ${fmtEth(s.eth, 6)} mETH`)}
         <div class="tabs">${[['now', 'This round'], ['board', 'Leaderboard'], ['hist', 'My payouts']].map(([k, n]) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-act="tab" data-key="tab" data-val="${k}">${n}</button>`).join('')}</div>
         <div class="body">${body}</div>`;
     },
@@ -562,7 +562,7 @@ export const PANELS = {
     cls: 'narrow', live: false,
     render(ui) {
       const g = ui.game, s = g.s;
-      return `${head('ui_settings', esc(s.user), `Level ${s.level} · ${g.owned().length} Chainers · ${fmtEth(s.pool.earned, 5)} ETH earned`)}
+      return `${head('ui_settings', esc(s.user), `Level ${s.level} · ${g.owned().length} Chainers · ${fmtEth(s.pool.earned, 5)} mETH earned`)}
         <div class="body">
           <div class="kv" style="margin-bottom:12px"><span>Expeditions</span><b>${s.tally.expeditions} sent · ${s.tally.success} successful</b><span>Harvests</span><b>${s.tally.harvests}</b><span>Wanderers met</span><b>${s.tally.wanderers}</b><span>Pool points</span><b>${fmt(s.pool.lifetime)}</b></div>
           <h3>Sound</h3>
@@ -602,8 +602,8 @@ export const PANELS = {
     }
     if (!c.owned) {
       const price = g.recruitPrice(c), fc = Math.round(g.feedCost(c) * (c.fed ? GUEST.extendCostMul : 1));
-      acts = act('feed', 'item_food_bowl', c.fed ? 'Feed again' : 'Feed', g.s.res.bio >= fc, 'Not enough Biopoints', 'feed', '', '') .replace('</b>', `</b><em>${ic('res_bio', 16)}${fc}</em>`)
-        + act('recruit', 'item_eth', 'Recruit', g.s.eth + 1e-12 >= price, 'Earn ETH from the Reward Pool', 'eth').replace('</b>', `</b><em>${fmtEth(price, 4)} ETH</em>`)
+      acts = act('feed', 'item_food_bowl', c.fed ? 'Feed again' : 'Feed', g.s.res.bio >= fc, 'Not enough Biopoints', 'feed', '', '') .replace('</b>', `</b><em class="${g.s.res.bio >= fc ? '' : 'no'}">${ic('res_bio', 16)}${fc}</em>`)
+        + act('recruit', 'item_eth', 'Recruit', g.s.eth + 1e-12 >= price, 'Earn ETH from the Reward Pool', 'eth').replace('</b>', `</b><em class="${g.s.eth + 1e-12 >= price ? '' : 'no'}">${fmtEth(price)} mETH</em>`)
         + acts;
     }
     acts += act('cDetails', 'item_book', 'Details', true, '', 'quiet');
@@ -669,7 +669,7 @@ export const PANELS = {
     if (chk && !chk.max) {
       // ONE obvious button. It says what you get, what it costs, and when it is locked exactly what is missing
       const miss = chk.cost && !g.canAfford(chk.cost) ? g.missing(chk.cost)[0] : null;
-      const need = miss ? (miss === 'eth' ? 'Needs ETH from the Reward Pool' : `Need ${fmt(Math.ceil(chk.cost.res[miss] - (g.s.res[miss] || 0)))} more ${resName(miss)}`) : '';
+      const need = miss ? (miss === 'eth' ? 'Not enough mETH. Earn it in the Reward Pool' : `Need ${fmt(Math.ceil(chk.cost.res[miss] - (g.s.res[miss] || 0)))} more ${resName(miss)}`) : '';
       const how = chk.ok ? '' : chk.level ? `<div class="req">${ic('item_lock', 18)}<span>You are Homestead level ${g.s.level}.</span><button class="btn sm ghost" data-act="open" data-panel="level">How to level up</button></div>`
         : chk.home ? `<div class="req">${ic('item_lock', 18)}<span>Your Chainer Home is level ${g.homeLevel()}.</span><button class="btn sm ghost" data-act="hint" data-hint="home">Go to Home</button></div>`
           : need ? '' : `<div class="req"><span>${chk.why}</span></div>`;
