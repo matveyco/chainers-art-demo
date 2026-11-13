@@ -86,7 +86,7 @@ export class Game {
       pool: { epoch: 0, myPoints: 0, lifetime: 0, history: [], earned: 0 },
       exchange: null,
       quest: { idx: 0, c: { cleared: 0, harvest: 0, fed: 0, expeditions: 0, crates: 0, crate2: 0, deposits: 0, swaps: 0, recruited: 0, land: 0, ethEarned: 0 }, ready: false },
-      settings: { sfx: true, speed: 1 }, artV: 2, season: DEFAULT_SEASON, rulesV: 2,
+      settings: { sfx: true, speed: 1 }, artV: 2, season: DEFAULT_SEASON, rulesV: 3,
       upg: {}, auto: {}, larder: 0, draw: null,
       tally: { expeditions: 0, success: 0, harvests: 0, wanderers: 0 },
     };
@@ -113,6 +113,10 @@ export class Game {
     const s = this.s;
     for (const reg of REGIONS) if (!s.pois[reg.id]) s.pois[reg.id] = [];
     // saves from before the frontier: places and trips had no trail; start the frontier fresh and bring everyone home
+    if ((s.rulesV | 0) === 2) {      // two storage quests were added (after the 3rd and the 5th): keep everyone on the quest they were on
+      if (s.quest && typeof s.quest.idx === 'number') s.quest.idx += (s.quest.idx >= 3 ? 1 : 0) + (s.quest.idx >= 5 ? 1 : 0);
+      s.rulesV = 3;
+    }
     if ((s.rulesV | 0) < 2) {
       for (const e of s.expeditions || []) for (const id of e.team) { const c = s.chainers.find(x => x.id === id); if (c) { c.status = 'idle'; c.expId = null; } }
       s.expeditions = [];
@@ -259,7 +263,7 @@ export class Game {
     let up = false;
     while (s.xp >= xpForLevel(s.level)) { s.xp -= xpForLevel(s.level); s.level++; up = true; }
     if (up) {
-      const reward = { bio: 40 + s.level * 15, wood: 30 + s.level * 10, stone: 30 + s.level * 10 };
+      const reward = { bio: 20 + s.level * 10, wood: 20 + s.level * 10, stone: 20 + s.level * 10 };      // a top-up, not a windfall: big gifts were lost to a full Storage
       const got = this.give(reward, { quiet: true });      // the card itself says what a full Storage cost you
       this.bus.emit('levelup', s.level, got);
     }

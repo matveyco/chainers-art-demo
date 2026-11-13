@@ -30,7 +30,7 @@ export const RES_SOURCES = {
 };
 export const RES_ORDER = ['wood', 'stone', 'bio', 'ore', 'planks', 'bricks', 'ingot', 'crystal'];
 export const HUD_RES = ['wood', 'stone', 'bio', 'ore', 'planks', 'bricks', 'ingot', 'crystal'];
-export const BASE_CAP = { wood: 300, stone: 300, bio: 300, ore: 150, crystal: 20, planks: 80, bricks: 80, ingot: 40 };
+export const BASE_CAP = { wood: 400, stone: 400, bio: 300, ore: 150, crystal: 20, planks: 80, bricks: 80, ingot: 40 };
 
 // Crates are what you upload into the Reward Pool.
 export const CRATES = {
@@ -465,13 +465,18 @@ export const EXCHANGE = { depth: 16000, tickSec: 25, revert: 0.06, historyLen: 6
 export const xpForLevel = (l) => Math.round(40 * Math.pow(l, 1.7));
 
 export const QUESTS = [
+  // Early pacing (see docs/GAME_DESIGN.md, "The first ten minutes"): gifts are Wood and Stone, which the next
+  // building eats; Biopoints gifts stay small until the Granary quest has raised their limit. A storage building
+  // is asked for just before the first thing that would fill it.
   { id: 'q_clear',   text: 'Tap a tree or rock to clear it', goal: { cleared: 2 }, reward: { wood: 30, stone: 30 }, hint: 'clear' },
-  { id: 'q_farm',    text: 'Build a Farm Plot', goal: { build: 'farm_plot' }, reward: { bio: 40 }, hint: 'build:farm_plot' },
-  { id: 'q_plant',   text: 'Plant and harvest Carrots', goal: { harvest: 1 }, reward: { bio: 40, wood: 30 }, hint: 'farm' },
-  { id: 'q_fire',    text: 'Build a Campfire for your Wanderer Camp', goal: { build: 'decor_campfire' }, reward: { stone: 40, bio: 30 }, hint: 'build:decor_campfire' },
-  { id: 'q_feed',    text: 'Feed a Wanderer', goal: { fed: 1 }, reward: { wood: 40, stone: 40 }, hint: 'camp' },
+  { id: 'q_farm',    text: 'Build a Farm Plot', goal: { build: 'farm_plot' }, reward: { wood: 30, stone: 20 }, hint: 'build:farm_plot' },
+  { id: 'q_plant',   text: 'Plant and harvest Carrots', goal: { harvest: 1 }, reward: { bio: 30, wood: 30 }, hint: 'farm' },
+  { id: 'q_granary', text: 'Build a Granary: more room for Biopoints', goal: { build: 'granary' }, reward: { bio: 60 }, hint: 'build:granary' },
+  { id: 'q_fire',    text: 'Build a Campfire for your Wanderer Camp', goal: { build: 'decor_campfire' }, reward: { wood: 20, bio: 30 }, hint: 'build:decor_campfire' },
+  { id: 'q_feed',    text: 'Feed a Wanderer', goal: { fed: 1 }, reward: { wood: 30, stone: 10 }, hint: 'camp' },
+  { id: 'q_store',   text: 'Build a Warehouse: more room for Wood, Stone and goods', goal: { build: 'warehouse' }, reward: { wood: 40, stone: 40 }, hint: 'build:warehouse' },
   { id: 'q_dock',    text: 'Build the Expedition Lodge', goal: { build: 'balloon_dock' }, reward: { bio: 60 }, hint: 'build:balloon_dock' },
-  { id: 'q_exp',     text: 'Send a squad to the Frontier', goal: { expeditions: 1 }, reward: { wood: 50, stone: 50, bio: 50 }, hint: 'expedition' },
+  { id: 'q_exp',     text: 'Send a squad to the Frontier', goal: { expeditions: 1 }, reward: { wood: 40, stone: 40, bio: 50 }, hint: 'expedition' },
   { id: 'q_work',    text: 'Build the Crate Workshop', goal: { build: 'workshop' }, reward: { wood: 40, stone: 40 }, hint: 'build:workshop' },
   { id: 'q_crate',   text: 'Craft a Relief Crate', goal: { crates: 1 }, reward: { bio: 60 }, hint: 'workshop' },
   { id: 'q_pool',    text: 'Build the Pool Shrine and upload a Crate', goal: { deposits: 1 }, reward: { wood: 60, stone: 60 }, hint: 'build:pool_shrine' },
@@ -490,7 +495,7 @@ export const QUESTS = [
 
 // The basic set: one Chainer, the Chainer Home and the Wanderer Camp (tile offset from the island centre).
 export const START = {
-  res: { wood: 90, stone: 70, bio: 80, ore: 0, crystal: 0, planks: 0, bricks: 0, ingot: 0 },
+  res: { wood: 150, stone: 90, bio: 100, ore: 0, crystal: 0, planks: 0, bricks: 0, ingot: 0 },      // enough for the first three buildings without waiting on trees
   eth: 0,
   camp: [2, -1],
   firstGuestSec: 75,
