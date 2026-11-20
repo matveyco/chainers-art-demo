@@ -4,6 +4,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 
 | Demo | URL | What it shows |
 |---|---|---|
+| Chainers City | [/demos/city/](https://chainers.art/demos/city/) | A strategy prototype: a walled town that grows from its Town Center, residents to feed and house, a farm, three troop classes, mob waves at the gate, a world map with marches, heroes and an hourly reward pool (other players and payouts are simulated in the browser). Phone-first UI, a test clock to skip time. Built with PlayCanvas. |
 | Chainers Homestead | [/demos/homestead/](https://chainers.art/demos/homestead/) | A home-building game: clear a forest clearing, farm, give Chainers orders, house Wanderers, send parties on foot to the frontier, automate the work with supply lines, pack crates for a reward pool and trade on an exchange (accounts, pool and exchange are simulated in the browser). Four seasons, phone-first UI. Built with PlayCanvas. |
 | Chainers Brawl | [/demos/brawl/](https://chainers.art/demos/brawl/) | Top-down brawler against bots: Gem Grab (3 vs 3) and Solo Showdown (six players, power boxes, closing gas). Four Chainers with their own outfits, weapons and supers, bushes to hide in, breakable walls, toon / PBR / pixel-art graphics, twin-stick touch controls. Built with PlayCanvas. |
 | Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range with toon VFX, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
@@ -17,6 +18,7 @@ site/                     static root, served as is
   vendor/playcanvas/      engine build shared by all demos (MIT)
   demos/<slug>/           one folder per demo
 src/<slug>/               demo sources (ES modules, styles, page template): gaptooth, brawl, homestead
+                          (city has no sources here: it is built in its own project, straight into site/demos/city/)
 tools/build.mjs           bundles src/<slug> into site/demos/<slug> (all demos, or the slugs given)
 nginx/                    config for the site container
 compose.yml               the site container (nginx, localhost:4190)
@@ -61,6 +63,15 @@ Any static server also works (`npx serve site`), without the production headers.
 - **World**: locations have no edges (painted ground, forest to the horizon, distance haze). Four seasons re-light the world and recolour foliage and snow in the shader; nothing is rebuilt when the season turns.
 - **UI**: designed for a phone first. Sticker icons rendered from the game models, one-list build menu, buildings placed where you point, illustrated first-run cards, a mute button always in reach.
 - **Layout here**: it bundles its own PlayCanvas (2.24) into `app.<hash>.js` as an ES module. Models, textures and icons are in `assets/` and requested with `?v=<hash>`; sounds are in `audio/` so they are served with an audio type. Sources and assets are copied in from the game's own project, so edit there, not here.
+
+## Chainers City: what is in the build
+
+- **The game**: a prototype of a city strategy game. The Town Center sets the level cap and brings 23 other buildings as it grows; six sectors open more land inside the walls. Residents live in Houses, work in the Sawmill, Quarry, Mill and Iron Mine, pay Gold tax, and need the Kitchen and the Clinic. The Farm outside the east gate turns harvests into Biopoints.
+- **Army and defense**: Infantry, Ranged and Cavalry with class levels, an Infirmary and a 48-hour window to bring back the fallen, Bread upkeep. Mobs attack once a day in three waves; walls, a barricade, a tower with three weapons, heroes and garrisons hold them, and the defense panel forecasts each wave.
+- **World map**: resource nodes, mob camps, other cities and clan towers; squads march there and back with a battle forecast before they leave.
+- **Heroes and pools**: twelve Chainers heroes with shards, rarity, stars, skills and gear; an hourly reward pool and a farm pool. Other players, pool payouts and raids are simulated locally; there are no accounts or wallets, nothing in it is real money, and progress is saved in the browser only.
+- **Test clock**: real timers run for hours, so the hourglass in the top bar speeds the clock up to ×600 or skips ahead.
+- **Layout here**: same as Homestead (its own PlayCanvas in `app.<hash>.js`, assets with `?v=<hash>`, sounds in `audio/`), and it shares Homestead's look, engine code and many of its models. It is built in its own project and only the finished files are committed here, so there is nothing to edit in this repo.
 
 ## Edit a demo
 
