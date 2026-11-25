@@ -4,7 +4,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 
 | Demo | URL | What it shows |
 |---|---|---|
-| Chainers City | [/demos/city/](https://chainers.art/demos/city/) | A city-builder prototype: an empty clearing with one City Center, every building placed by hand, a story of 48 tasks that opens one thing at a time, Chainers as named workers and warriors, mob waves at the gate, a world map with squads and a reward pool (other players and payouts are simulated in the browser). Phone-first UI. Built with PlayCanvas. |
+| Chainers City | [/demos/city/](https://chainers.art/demos/city/) | A city-builder prototype: an empty clearing with one City Center, every building placed by hand, a story of 51 tasks that opens one thing at a time, Chainers as named workers and warriors, twenty kinds of mobs in waves at the gate, watchtowers, a trading post, a world map with squads and a reward pool (other players and payouts are simulated in the browser). Phone-first UI. Built with PlayCanvas. |
 | Chainers Homestead | [/demos/homestead/](https://chainers.art/demos/homestead/) | A home-building game: clear a forest clearing, farm, give Chainers orders, house Wanderers, send parties on foot to the frontier, automate the work with supply lines, pack crates for a reward pool and trade on an exchange (accounts, pool and exchange are simulated in the browser). Four seasons, phone-first UI. Built with PlayCanvas. |
 | Chainers Brawl | [/demos/brawl/](https://chainers.art/demos/brawl/) | Top-down brawler against bots: Gem Grab (3 vs 3) and Solo Showdown (six players, power boxes, closing gas). Four Chainers with their own outfits, weapons and supers, bushes to hide in, breakable walls, toon / PBR / pixel-art graphics, twin-stick touch controls. Built with PlayCanvas. |
 | Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range with toon VFX, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
@@ -68,9 +68,10 @@ Any static server also works (`npx serve site`), without the production headers.
 
 - **The game**: a prototype of the first half hour of a city builder. It starts as a small fenced clearing with only the City Center. Buildings are picked from the Build menu and put on a free tile by hand, turned, and moved later; the fence moves out as the City Center grows. One task at a time, shown on a card, opens the next building or mechanic, and each City Center level ends with a choice between two bonuses.
 - **Chainers**: named characters. Your own need a bed in a House; Wanderers camp by the gate and can be hired for a while. A Chainer works where you send them, can be trained in that job, or can become a warrior (one per House).
-- **Fights and the map**: from chapter 5 mobs come to the gate and are fought by the hero, the warriors, a watchtower and your taps. From chapter 6 squads go out on a world map to mob camps and resource points.
+- **Fights and the map**: from chapter 5 mobs come to the gate (twenty kinds, in four tiers of five classes) and are fought by the hero, the warriors, a guard dog, up to two watchtowers with a lookout each, and your taps. From chapter 6 squads go out on a world map to mob camps and resource points.
+- **Gold, Relics and ETH**: Chainers pay Gold as tax and the Trading Post buys and sells goods for it. Relics won from mob camps go into the Reward Pool building, which pays simulated ETH by share.
 - **Simulated**: allies, other players and the reward pool's payouts run locally. There are no accounts or wallets, nothing in it is real money, and progress is saved in the browser only.
-- **Test controls**: the hourglass in the top bar speeds the clock up, calls a mob wave or starts over.
+- **Test controls**: the gear in the top bar speeds the clock up, calls a mob wave or starts over.
 - **Layout here**: same as Homestead (its own PlayCanvas in `app.<hash>.js`, assets with `?v=<hash>`, sounds in `audio/`), and it shares Homestead's look, engine code and many of its models. It is built in its own project and only the finished files are committed here, so there is nothing to edit in this repo.
 
 ## Edit a demo
