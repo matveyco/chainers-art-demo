@@ -4,7 +4,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 
 | Demo | URL | What it shows |
 |---|---|---|
-| Chainers City | [/demos/city/](https://chainers.art/demos/city/) | A strategy prototype: a walled town that grows from its Town Center, residents to feed and house, a farm, three troop classes, mob waves at the gate, a world map with marches, heroes and an hourly reward pool (other players and payouts are simulated in the browser). Phone-first UI, a test clock to skip time. Built with PlayCanvas. |
+| Chainers City | [/demos/city/](https://chainers.art/demos/city/) | A city-builder prototype: an empty clearing with one City Center, every building placed by hand, a story of 48 tasks that opens one thing at a time, Chainers as named workers and warriors, mob waves at the gate, a world map with squads and a reward pool (other players and payouts are simulated in the browser). Phone-first UI. Built with PlayCanvas. |
 | Chainers Homestead | [/demos/homestead/](https://chainers.art/demos/homestead/) | A home-building game: clear a forest clearing, farm, give Chainers orders, house Wanderers, send parties on foot to the frontier, automate the work with supply lines, pack crates for a reward pool and trade on an exchange (accounts, pool and exchange are simulated in the browser). Four seasons, phone-first UI. Built with PlayCanvas. |
 | Chainers Brawl | [/demos/brawl/](https://chainers.art/demos/brawl/) | Top-down brawler against bots: Gem Grab (3 vs 3) and Solo Showdown (six players, power boxes, closing gas). Four Chainers with their own outfits, weapons and supers, bushes to hide in, breakable walls, toon / PBR / pixel-art graphics, twin-stick touch controls. Built with PlayCanvas. |
 | Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range with toon VFX, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
@@ -66,11 +66,11 @@ Any static server also works (`npx serve site`), without the production headers.
 
 ## Chainers City: what is in the build
 
-- **The game**: a prototype of a city strategy game. The Town Center sets the level cap and brings 23 other buildings as it grows; six sectors open more land inside the walls. Residents live in Houses, work in the Sawmill, Quarry, Mill and Iron Mine, pay Gold tax, and need the Kitchen and the Clinic. The Farm outside the east gate turns harvests into Biopoints.
-- **Army and defense**: Infantry, Ranged and Cavalry with class levels, an Infirmary and a 48-hour window to bring back the fallen, Bread upkeep. Mobs attack once a day in three waves; walls, a barricade, a tower with three weapons, heroes and garrisons hold them, and the defense panel forecasts each wave.
-- **World map**: resource nodes, mob camps, other cities and clan towers; squads march there and back with a battle forecast before they leave.
-- **Heroes and pools**: twelve Chainers heroes with shards, rarity, stars, skills and gear; an hourly reward pool and a farm pool. Other players, pool payouts and raids are simulated locally; there are no accounts or wallets, nothing in it is real money, and progress is saved in the browser only.
-- **Test clock**: real timers run for hours, so the hourglass in the top bar speeds the clock up to ×600 or skips ahead.
+- **The game**: a prototype of the first half hour of a city builder. It starts as a small fenced clearing with only the City Center. Buildings are picked from the Build menu and put on a free tile by hand, turned, and moved later; the fence moves out as the City Center grows. One task at a time, shown on a card, opens the next building or mechanic, and each City Center level ends with a choice between two bonuses.
+- **Chainers**: named characters. Your own need a bed in a House; Wanderers camp by the gate and can be hired for a while. A Chainer works where you send them, can be trained in that job, or can become a warrior (one per House).
+- **Fights and the map**: from chapter 5 mobs come to the gate and are fought by the hero, the warriors, a watchtower and your taps. From chapter 6 squads go out on a world map to mob camps and resource points.
+- **Simulated**: allies, other players and the reward pool's payouts run locally. There are no accounts or wallets, nothing in it is real money, and progress is saved in the browser only.
+- **Test controls**: the hourglass in the top bar speeds the clock up, calls a mob wave or starts over.
 - **Layout here**: same as Homestead (its own PlayCanvas in `app.<hash>.js`, assets with `?v=<hash>`, sounds in `audio/`), and it shares Homestead's look, engine code and many of its models. It is built in its own project and only the finished files are committed here, so there is nothing to edit in this repo.
 
 ## Edit a demo
