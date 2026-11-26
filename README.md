@@ -8,6 +8,7 @@ Playable demos from the Chainers team, live at **[chainers.art](https://chainers
 | Chainers Homestead | [/demos/homestead/](https://chainers.art/demos/homestead/) | A home-building game: clear a forest clearing, farm, give Chainers orders, house Wanderers, send parties on foot to the frontier, automate the work with supply lines, pack crates for a reward pool and trade on an exchange (accounts, pool and exchange are simulated in the browser). Four seasons, phone-first UI. Built with PlayCanvas. |
 | Chainers Brawl | [/demos/brawl/](https://chainers.art/demos/brawl/) | Top-down brawler against bots: Gem Grab (3 vs 3) and Solo Showdown (six players, power boxes, closing gas). Four Chainers with their own outfits, weapons and supers, bushes to hide in, breakable walls, toon / PBR / pixel-art graphics, twin-stick touch controls. Built with PlayCanvas. |
 | Gaptooth Test Range | [/demos/gaptooth/](https://chainers.art/demos/gaptooth/) | An articulated voxel character with 26 animations and four weapons with moving parts. Third-person shooting range with toon VFX, 60-second score attack, animation studio, reference match; physically based and comic render styles; performance overlay. Built with PlayCanvas. |
+| Chainers Expedition | [/demos/expedition/](https://chainers.art/demos/expedition/) | A first-person roguelite prototype: an outpost to gear up in, jobs in three lands generated from a seed, 17 beasts with announced attacks and weak spots, seven guns with upgrades and tunings, perks picked on every level, a squad of AI Chainers, a beacon to hold at the end. Mouse and keyboard only. Built with PlayCanvas. |
 
 ## Layout
 
@@ -18,7 +19,8 @@ site/                     static root, served as is
   vendor/playcanvas/      engine build shared by all demos (MIT)
   demos/<slug>/           one folder per demo
 src/<slug>/               demo sources (ES modules, styles, page template): gaptooth, brawl, homestead
-                          (city has no sources here: it is built in its own project, straight into site/demos/city/)
+                          (city and expedition have no sources here: each is built in its own project, straight into
+                          site/demos/<slug>/)
 tools/build.mjs           bundles src/<slug> into site/demos/<slug> (all demos, or the slugs given)
 nginx/                    config for the site container
 compose.yml               the site container (nginx, localhost:4190)
@@ -73,6 +75,17 @@ Any static server also works (`npx serve site`), without the production headers.
 - **Simulated**: allies, other players and the reward pool's payouts run locally. There are no accounts or wallets, nothing in it is real money, and progress is saved in the browser only.
 - **Test controls**: the gear in the top bar speeds the clock up, calls a mob wave or starts over.
 - **Layout here**: same as Homestead (its own PlayCanvas in `app.<hash>.js`, assets with `?v=<hash>`, sounds in `audio/`), and it shares Homestead's look, engine code and many of its models. It is built in its own project and only the finished files are committed here, so there is nothing to edit in this repo.
+
+## Chainers Expedition: what is in the build
+
+- **The game**: a first-person roguelite prototype for mouse and keyboard. You walk an outpost (job board, gunsmith, quartermaster, squad tent, shard forge, firing range; the stations open one at a time as expeditions come home), take a job and ride out by wagon.
+- **Expeditions**: four kinds of job (hunt, purge, rescue, great hunt) in three lands (Amber Woods, Greenmarsh, Shardfall). Each land is generated from the job's seed: goal sites, shrines, caches and ruins joined by trails. Every job ends with lighting a beacon, holding out and boarding the wagon. Fall, and you keep part of the scrap.
+- **Guns**: seven (revolver, nail gun, shotgun, scoped rifle, shard caster, launcher, arc coil), each with five levels and a choice between two tunings at level 3. Melee, grenades, medkits, a dash and a slide.
+- **Beasts**: 17 kinds including three bosses, with attacks that are announced before they land, weak spots and breakable armour.
+- **Run and progress**: experience during a run gives a choice of one perk out of three; scrap and shards brought home pay for guns, upgrades, supplies and squad slots.
+- **Squad**: up to three AI Chainers who follow, hold, focus a marked target and revive you. There is no network play.
+- **Saved** in the browser only; there are no accounts.
+- **Layout here**: same as City (its own PlayCanvas in `app.<hash>.js`, assets with `?v=<hash>`, sounds in `audio/`). It shares Homestead's look and engine code and borrows models from Homestead and City. It is built in its own project and only the finished files are committed here, so there is nothing to edit in this repo.
 
 ## Edit a demo
 
